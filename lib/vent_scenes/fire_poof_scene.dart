@@ -1,8 +1,11 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../models/vent_target.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/dramatic_fx.dart';
 import '../../widgets/target_avatar.dart';
 import '../../widgets/vent_scene_shell.dart';
 
@@ -20,6 +23,8 @@ class _FirePoofSceneState extends State<FirePoofScene>
   bool _burning = false;
   double _burnProgress = 0;
   late AnimationController _flameController;
+  late final DramaticFxController _fx = DramaticFxController();
+  final _rng = Random();
 
   @override
   void initState() {
@@ -28,81 +33,127 @@ class _FirePoofSceneState extends State<FirePoofScene>
       vsync: this,
       duration: const Duration(milliseconds: 400),
     )..repeat(reverse: true);
+    _fx.addListener(() {
+      if (mounted) setState(() {});
+    });
   }
 
   @override
   void dispose() {
+    _fx.dispose();
     _flameController.dispose();
     super.dispose();
   }
 
-  Future<void> _ignite() async {
+  Future<void> _ignite(Size area) async {
     if (_burning) return;
     setState(() => _burning = true);
+    final center = Offset(area.width / 2, area.height * 0.48);
+    _fx.fireBurst(at: center, count: 45);
+    _fx.comicPop(at: center, text: 'FWOOSH!', color: const Color(0xFFFF7043));
+
     for (var i = 1; i <= 25; i++) {
       await Future.delayed(const Duration(milliseconds: 80));
       if (!mounted) return;
       setState(() => _burnProgress = i / 25);
+
+      final emberAt = center.translate(
+        (_rng.nextDouble() - 0.5) * 80,
+        (_rng.nextDouble() - 0.5) * 60 - _burnProgress * 20,
+      );
+      _fx.impact(
+        at: emberAt,
+        count: 10 + (i % 3) * 4,
+        intensity: 0.55 + _burnProgress * 0.5,
+        haptic: i.isEven,
+        color: Color.lerp(
+          const Color(0xFFFFD54F),
+          const Color(0xFFE53935),
+          _burnProgress,
+        ),
+      );
+      if (i % 4 == 0) {
+        _fx.fireBurst(at: emberAt, count: 12);
+        _fx.smokeBurst(at: emberAt, count: 4);
+      }
     }
+
+    _fx.megaImpact(at: center, color: const Color(0xFFFF7043));
+    _fx.smokeBurst(at: center, count: 18, color: Colors.grey.shade700);
+    await Future.delayed(const Duration(milliseconds: 500));
     if (mounted) context.go('/calm/${widget.target.id}');
   }
 
   @override
   Widget build(BuildContext context) {
-    return VentSceneShell(
-      target: widget.target,
-      title: 'Fire Poof',
-      hint: _burning ? 'Poof! Gone in smoke 🔥' : 'Tap to set ablaze (cartoon style!)',
-      showTarget: false,
-      child: GestureDetector(
-        onTap: _ignite,
-        child: Center(
-          child: Stack(
-            alignment: Alignment.center,
-            clipBehavior: Clip.none,
-            children: [
-              Opacity(
-                opacity: 1 - _burnProgress,
-                child: TargetAvatar(
-                  target: widget.target,
-                  size: 160,
-                  showLabel: false,
-                ),
-              ),
-              if (_burning)
-                ...List.generate(5, (i) {
-                  return AnimatedBuilder(
-                    animation: _flameController,
-                    builder: (context, _) {
-                      final offset = (i - 2) * 30.0;
-                      final height = 40 + _flameController.value * 30 + i * 10;
-                      return Positioned(
-                        bottom: 80 + _burnProgress * 20,
-                        left: offset,
-                        child: Icon(
-                          Icons.local_fire_department,
-                          size: height,
-                          color: Color.lerp(
-                            Colors.orange,
-                            Colors.red,
-                            _flameController.value,
+    return DramaticFxTicker(
+      controller: _fx,
+      child: VentSceneShell(
+        target: widget.target,
+        title: 'Fire Poof',
+        hint: _burning
+            ? 'Poof! Gone in smoke 🔥'
+            : 'Tap to set ablaze (cartoon style!)',
+        showTarget: false,
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final area = Size(constraints.maxWidth, constraints.maxHeight);
+            return GestureDetector(
+              onTap: () => _ignite(area),
+              child: ventFxLayer(
+                fx: _fx,
+                child: Center(
+                  child: Stack(
+                    alignment: Alignment.center,
+                    clipBehavior: Clip.none,
+                    children: [
+                      Opacity(
+                        opacity: 1 - _burnProgress,
+                        child: TargetAvatar(
+                          target: widget.target,
+                          size: 160,
+                          showLabel: false,
+                        ),
+                      ),
+                      if (_burning)
+                        ...List.generate(5, (i) {
+                          return AnimatedBuilder(
+                            animation: _flameController,
+                            builder: (context, _) {
+                              final offset = (i - 2) * 30.0;
+                              final height =
+                                  40 + _flameController.value * 30 + i * 10;
+                              return Positioned(
+                                bottom: 80 + _burnProgress * 20,
+                                left: offset,
+                                child: Icon(
+                                  Icons.local_fire_department,
+                                  size: height,
+                                  color: Color.lerp(
+                                    Colors.orange,
+                                    Colors.red,
+                                    _flameController.value,
+                                  ),
+                                ),
+                              );
+                            },
+                          );
+                        }),
+                      if (_burnProgress > 0.7)
+                        Text(
+                          'POOF!',
+                          style: TextStyle(
+                            fontSize: 36,
+                            fontWeight: FontWeight.bold,
+                            color: AppTheme.accent.withValues(alpha: _burnProgress),
                           ),
                         ),
-                      );
-                    },
-                  );
-                }),
-              if (_burnProgress > 0.7)
-                Text(
-                  'POOF!',
-                  style: TextStyle(
-                    fontSize: 36,
-                    fontWeight: FontWeight.bold,
-                    color: AppTheme.accent.withValues(alpha: _burnProgress),
+                    ],
                   ),
                 ),
-            ],
-          ),
+              ),
+            );
+          },
         ),
       ),
     );

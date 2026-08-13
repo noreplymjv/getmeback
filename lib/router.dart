@@ -8,13 +8,17 @@ import 'screens/create_character_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/vent_menu_screen.dart';
 import 'services/storage_service.dart';
+import 'vent_scenes/anvil_drop_scene.dart';
 import 'vent_scenes/balloon_pop_scene.dart';
+import 'vent_scenes/black_hole_scene.dart';
 import 'vent_scenes/blender_scene.dart';
+import 'vent_scenes/boxing_ko_scene.dart';
 import 'vent_scenes/catapult_scene.dart';
 import 'vent_scenes/dart_throw_scene.dart';
 import 'vent_scenes/fire_poof_scene.dart';
 import 'vent_scenes/ice_shatter_scene.dart';
 import 'vent_scenes/lightning_scene.dart';
+import 'vent_scenes/paint_bomb_scene.dart';
 import 'vent_scenes/pinata_scene.dart';
 import 'vent_scenes/punch_bag_scene.dart';
 import 'vent_scenes/shredder_scene.dart';
@@ -22,41 +26,73 @@ import 'vent_scenes/sink_scene.dart';
 import 'vent_scenes/sledgehammer_scene.dart';
 import 'vent_scenes/smash_scene.dart';
 import 'vent_scenes/stomp_scene.dart';
+import 'vent_scenes/tornado_scene.dart';
 import 'vent_scenes/trash_can_scene.dart';
+import 'vent_scenes/volcano_scene.dart';
+
+CustomTransitionPage<void> _fadeSlide(GoRouterState state, Widget child) {
+  return CustomTransitionPage<void>(
+    key: state.pageKey,
+    child: child,
+    transitionDuration: const Duration(milliseconds: 420),
+    reverseTransitionDuration: const Duration(milliseconds: 280),
+    transitionsBuilder: (context, animation, secondary, child) {
+      final curved = CurvedAnimation(
+        parent: animation,
+        curve: Curves.easeOutCubic,
+      );
+      return FadeTransition(
+        opacity: curved,
+        child: SlideTransition(
+          position: Tween<Offset>(
+            begin: const Offset(0, 0.04),
+            end: Offset.zero,
+          ).animate(curved),
+          child: child,
+        ),
+      );
+    },
+  );
+}
 
 final GoRouter appRouter = GoRouter(
   initialLocation: '/',
   routes: [
     GoRoute(
       path: '/',
-      builder: (context, state) => const HomeScreen(),
+      pageBuilder: (context, state) =>
+          _fadeSlide(state, const HomeScreen()),
     ),
     GoRoute(
       path: '/create',
-      builder: (context, state) => const CreateCharacterScreen(),
+      pageBuilder: (context, state) =>
+          _fadeSlide(state, const CreateCharacterScreen()),
     ),
     GoRoute(
       path: '/vent-menu/:targetId',
-      builder: (context, state) {
+      pageBuilder: (context, state) {
         final targetId = state.pathParameters['targetId']!;
-        return VentMenuScreen(targetId: targetId);
+        return _fadeSlide(state, VentMenuScreen(targetId: targetId));
       },
     ),
     GoRoute(
       path: '/calm/:targetId',
-      builder: (context, state) {
+      pageBuilder: (context, state) {
         final targetId = state.pathParameters['targetId']!;
-        return CalmOutroScreen(targetId: targetId);
+        return _fadeSlide(state, CalmOutroScreen(targetId: targetId));
       },
     ),
     GoRoute(
       path: '/vent/:action/:targetId',
-      builder: (context, state) {
+      pageBuilder: (context, state) {
         final actionName = state.pathParameters['action']!;
         final targetId = state.pathParameters['targetId']!;
-        return _VentSceneLoader(
-          actionName: actionName,
-          targetId: targetId,
+        return _fadeSlide(
+          state,
+          _VentSceneLoader(
+            actionName: actionName,
+            targetId: targetId,
+          ),
         );
       },
     ),
@@ -128,6 +164,12 @@ class _VentSceneLoaderState extends State<_VentSceneLoader> {
       VentActionType.sink => SinkScene(target: target),
       VentActionType.shredder => ShredderScene(target: target),
       VentActionType.pinata => PinataScene(target: target),
+      VentActionType.anvilDrop => AnvilDropScene(target: target),
+      VentActionType.tornado => TornadoScene(target: target),
+      VentActionType.paintBomb => PaintBombScene(target: target),
+      VentActionType.blackHole => BlackHoleScene(target: target),
+      VentActionType.boxingKo => BoxingKoScene(target: target),
+      VentActionType.volcano => VolcanoScene(target: target),
     };
   }
 }

@@ -1,10 +1,9 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 
 import '../models/preset_character.dart';
 import '../models/vent_target.dart';
 import '../theme/app_theme.dart';
+import '../utils/target_image.dart';
 
 class TargetAvatar extends StatelessWidget {
   const TargetAvatar({
@@ -41,18 +40,27 @@ class TargetAvatar extends StatelessWidget {
                   shape: BoxShape.circle,
                   color: preset?.color ?? AppTheme.card,
                   border: Border.all(
-                    color: AppTheme.accent.withValues(alpha: 0.5),
-                    width: 3,
+                    color: AppTheme.gold.withValues(alpha: 0.7),
+                    width: 2.5,
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.3),
-                      blurRadius: 12,
-                      offset: const Offset(0, 6),
+                      color: AppTheme.gold.withValues(alpha: 0.28),
+                      blurRadius: 18,
+                    ),
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.35),
+                      blurRadius: 14,
+                      offset: const Offset(0, 8),
                     ),
                   ],
                 ),
-                child: ClipOval(child: _buildContent(preset)),
+                child: ClipOval(
+                  child: TargetImage.build(
+                    target: target,
+                    emojiSize: size * 0.45,
+                  ),
+                ),
               ),
               if (cracks > 0) ..._buildCracks(size),
             ],
@@ -72,30 +80,24 @@ class TargetAvatar extends StatelessWidget {
     );
   }
 
-  Widget _buildContent(PresetCharacter? preset) {
-    if (target.hasPhoto) {
-      final file = File(target.imagePath!);
-      if (file.existsSync()) {
-        return Image.file(file, fit: BoxFit.cover);
-      }
-    }
-    return Center(
-      child: Text(
-        preset?.emoji ?? '🎯',
-        style: TextStyle(fontSize: size * 0.45),
-      ),
-    );
-  }
-
   List<Widget> _buildCracks(double avatarSize) {
-    return List.generate(cracks.clamp(0, 6), (index) {
-      final angle = (index * 60) * 3.14159 / 180;
+    return List.generate(cracks.clamp(0, 8), (index) {
+      final angle = (index * 45) * 3.14159 / 180;
       return Transform.rotate(
         angle: angle,
         child: Container(
-          width: 2,
-          height: avatarSize * 0.4,
-          color: Colors.white.withValues(alpha: 0.7),
+          width: 3,
+          height: avatarSize * 0.55,
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                Colors.white.withValues(alpha: 0.95),
+                Colors.white.withValues(alpha: 0.15),
+              ],
+            ),
+          ),
         ),
       );
     });

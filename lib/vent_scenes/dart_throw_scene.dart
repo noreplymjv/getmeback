@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../models/vent_target.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/dramatic_fx.dart';
 import '../../widgets/target_avatar.dart';
 import '../../widgets/vent_scene_shell.dart';
 
@@ -20,6 +21,22 @@ class DartThrowScene extends StatefulWidget {
 class _DartThrowSceneState extends State<DartThrowScene> {
   final List<Offset> _darts = [];
   int _hits = 0;
+  late final DramaticFxController _fx = DramaticFxController();
+  Offset _center = Offset.zero;
+
+  @override
+  void initState() {
+    super.initState();
+    _fx.addListener(() {
+      if (mounted) setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _fx.dispose();
+    super.dispose();
+  }
 
   void _throwDart(TapDownDetails details) {
     final box = context.findRenderObject() as RenderBox?;
@@ -29,8 +46,21 @@ class _DartThrowSceneState extends State<DartThrowScene> {
       _darts.add(local);
       _hits++;
     });
+    final dist = (local - _center).distance;
+    final isBullseye = dist < 55;
+    if (isBullseye) {
+      _fx.megaImpact(at: local, color: AppTheme.accent);
+    } else {
+      _fx.impact(
+        at: local,
+        count: 18,
+        color: AppTheme.accent,
+        intensity: 0.8,
+      );
+    }
     if (_hits >= 8) {
-      Future.delayed(const Duration(milliseconds: 800), () {
+      _fx.confettiBurst(at: _center, count: 70);
+      Future.delayed(const Duration(milliseconds: 900), () {
         if (mounted) context.go('/calm/${widget.target.id}');
       });
     }
@@ -38,47 +68,67 @@ class _DartThrowSceneState extends State<DartThrowScene> {
 
   @override
   Widget build(BuildContext context) {
-    return VentSceneShell(
-      target: widget.target,
-      title: 'Dart Throw',
-      hint: 'Tap anywhere to throw darts! ($_hits darts)',
-      showTarget: false,
-      child: GestureDetector(
-        onTapDown: _throwDart,
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            Container(
-              width: 220,
-              height: 220,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(color: AppTheme.calm, width: 4),
-                color: AppTheme.surface,
-              ),
-              child: Center(
-                child: TargetAvatar(
-                  target: widget.target,
-                  size: 100,
-                  showLabel: false,
+    return DramaticFxTicker(
+      controller: _fx,
+      child: VentSceneShell(
+        target: widget.target,
+        title: 'Dart Throw',
+        hint: 'Tap anywhere to throw darts! ($_hits darts)',
+        showTarget: false,
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            _center = Offset(
+              constraints.maxWidth / 2,
+              constraints.maxHeight / 2,
+            );
+            return GestureDetector(
+              onTapDown: _throwDart,
+              child: ventFxLayer(
+                fx: _fx,
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    Container(
+                      width: 220,
+                      height: 220,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(color: AppTheme.calm, width: 4),
+                        color: AppTheme.surface,
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppTheme.accent.withValues(alpha: 0.15),
+                            blurRadius: 24,
+                          ),
+                        ],
+                      ),
+                      child: Center(
+                        child: TargetAvatar(
+                          target: widget.target,
+                          size: 100,
+                          showLabel: false,
+                        ),
+                      ),
+                    ),
+                    ..._darts.map(
+                      (pos) => Positioned(
+                        left: pos.dx - 12,
+                        top: pos.dy - 12,
+                        child: Transform.rotate(
+                          angle: -pi / 4,
+                          child: const Icon(
+                            Icons.push_pin,
+                            size: 24,
+                            color: AppTheme.accent,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ),
-            ..._darts.map(
-              (pos) => Positioned(
-                left: pos.dx - 12,
-                top: pos.dy - 12,
-                child: Transform.rotate(
-                  angle: -pi / 4,
-                  child: const Icon(
-                    Icons.push_pin,
-                    size: 24,
-                    color: AppTheme.accent,
-                  ),
-                ),
-              ),
-            ),
-          ],
+            );
+          },
         ),
       ),
     );

@@ -16,6 +16,12 @@ enum VentActionType {
   sink,
   shredder,
   pinata,
+  anvilDrop,
+  tornado,
+  paintBomb,
+  blackHole,
+  boxingKo,
+  volcano,
 }
 
 class VentAction {
@@ -140,6 +146,48 @@ class VentAction {
       subtitle: 'Whack for candy',
       icon: Icons.celebration,
       color: Color(0xFFE91E63),
+    ),
+    VentAction(
+      type: VentActionType.anvilDrop,
+      title: 'Anvil Drop',
+      subtitle: 'Drop the cartoon anvil',
+      icon: Icons.square,
+      color: Color(0xFF90A4AE),
+    ),
+    VentAction(
+      type: VentActionType.tornado,
+      title: 'Tornado Spin',
+      subtitle: 'Whip up a whirlwind',
+      icon: Icons.cyclone,
+      color: Color(0xFF80CBC4),
+    ),
+    VentAction(
+      type: VentActionType.paintBomb,
+      title: 'Paint Bomb',
+      subtitle: 'Splash them colorful',
+      icon: Icons.format_paint,
+      color: Color(0xFFEC407A),
+    ),
+    VentAction(
+      type: VentActionType.blackHole,
+      title: 'Black Hole',
+      subtitle: 'Suck them into the void',
+      icon: Icons.blur_circular,
+      color: Color(0xFF7E57C2),
+    ),
+    VentAction(
+      type: VentActionType.boxingKo,
+      title: 'Boxing KO',
+      subtitle: 'Combo then knock out',
+      icon: Icons.sports_kabaddi,
+      color: Color(0xFFFF7043),
+    ),
+    VentAction(
+      type: VentActionType.volcano,
+      title: 'Volcano Erupt',
+      subtitle: 'Launch them with lava',
+      icon: Icons.landscape,
+      color: Color(0xFFFF6E40),
     ),
   ];
 

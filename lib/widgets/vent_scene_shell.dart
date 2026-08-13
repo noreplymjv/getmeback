@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../models/vent_target.dart';
 import '../theme/app_theme.dart';
+import '../widgets/premium_chrome.dart';
 import '../widgets/target_avatar.dart';
 
 class VentSceneShell extends StatelessWidget {
@@ -34,6 +35,7 @@ class VentSceneShell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
         title: Text(title),
         leading: IconButton(
@@ -43,41 +45,61 @@ class VentSceneShell extends StatelessWidget {
         actions: [
           TextButton(
             onPressed: () => _goToCalm(context),
-            child: const Text('Done'),
-          ),
-        ],
-      ),
-      body: Column(
-        children: [
-          if (showTarget)
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: TargetAvatar(target: target, size: 80, showLabel: false),
-            ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: Text(
-              hint,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: AppTheme.accentSecondary,
-                  ),
-              textAlign: TextAlign.center,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Expanded(child: child),
-          Padding(
-            padding: const EdgeInsets.all(24),
-            child: SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: () => _goToCalm(context),
-                icon: const Icon(Icons.spa),
-                label: const Text('I feel better'),
+            child: const Text(
+              'Done',
+              style: TextStyle(
+                color: AppTheme.gold,
+                fontWeight: FontWeight.w700,
               ),
             ),
           ),
         ],
+      ),
+      body: PremiumBackdrop(
+        intensity: 0.85,
+        child: SafeArea(
+          child: Column(
+            children: [
+              if (showTarget)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
+                  child: TargetAvatar(
+                    target: target,
+                    size: 76,
+                    showLabel: false,
+                  ),
+                ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 10, 24, 6),
+                child: GlassPanel(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 10,
+                  ),
+                  radius: 18,
+                  child: Text(
+                    hint,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: AppTheme.goldSoft,
+                          fontWeight: FontWeight.w600,
+                        ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ),
+              Expanded(child: child),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
+                child: ShineButton(
+                  label: 'I feel better',
+                  icon: Icons.spa,
+                  color: AppTheme.calm,
+                  onPressed: () => _goToCalm(context),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

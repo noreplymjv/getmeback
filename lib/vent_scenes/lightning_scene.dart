@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../models/vent_target.dart';
+import '../../widgets/dramatic_fx.dart';
 import '../../widgets/target_avatar.dart';
 import '../../widgets/vent_scene_shell.dart';
 
@@ -17,13 +18,30 @@ class LightningScene extends StatefulWidget {
 }
 
 class _LightningSceneState extends State<LightningScene> {
+  late final DramaticFxController _fx = DramaticFxController();
   int _zaps = 0;
   bool _zapping = false;
   final _random = Random();
+  Offset _center = Offset.zero;
+
+  @override
+  void initState() {
+    super.initState();
+    _fx.addListener(() {
+      if (mounted) setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _fx.dispose();
+    super.dispose();
+  }
 
   Future<void> _zap() async {
     if (_zapping || _zaps >= 4) return;
     setState(() => _zapping = true);
+    _fx.electricBurst(at: _center);
     for (var i = 0; i < 6; i++) {
       await Future.delayed(Duration(milliseconds: 60 + _random.nextInt(80)));
       if (!mounted) return;
@@ -35,6 +53,7 @@ class _LightningSceneState extends State<LightningScene> {
       _zapping = false;
     });
     if (_zaps >= 4) {
+      _fx.megaImpact(at: _center, color: Colors.yellowAccent);
       await Future.delayed(const Duration(milliseconds: 800));
       if (mounted) context.go('/calm/${widget.target.id}');
     }
@@ -42,50 +61,62 @@ class _LightningSceneState extends State<LightningScene> {
 
   @override
   Widget build(BuildContext context) {
-    return VentSceneShell(
-      target: widget.target,
-      title: 'Lightning Zap',
-      hint: _zaps >= 4
-          ? 'Zapped to ashes! ⚡'
-          : 'Tap to call down lightning! ($_zaps/4)',
-      showTarget: false,
-      child: GestureDetector(
-        onTap: _zap,
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            if (_zapping)
-              Container(
-                width: double.infinity,
-                height: double.infinity,
-                color: Colors.white.withValues(alpha: 0.15),
-              ),
-            Opacity(
-              opacity: 1 - _zaps * 0.2,
-              child: TargetAvatar(
-                target: widget.target,
-                size: 160,
-                showLabel: false,
-              ),
-            ),
-            if (_zapping)
-              CustomPaint(
-                size: const Size(200, 300),
-                painter: _LightningBoltPainter(
-                  seed: _random.nextInt(1000),
+    return DramaticFxTicker(
+      controller: _fx,
+      child: VentSceneShell(
+        target: widget.target,
+        title: 'Lightning Zap',
+        hint: _zaps >= 4
+            ? 'Zapped to ashes! ⚡'
+            : 'Tap to call down lightning! ($_zaps/4)',
+        showTarget: false,
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final area = Size(constraints.maxWidth, constraints.maxHeight);
+            _center = Offset(area.width / 2, area.height * 0.5);
+            return ventFxLayer(
+              fx: _fx,
+              child: GestureDetector(
+                onTap: _zap,
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    if (_zapping)
+                      Container(
+                        width: double.infinity,
+                        height: double.infinity,
+                        color: Colors.white.withValues(alpha: 0.15),
+                      ),
+                    Opacity(
+                      opacity: 1 - _zaps * 0.2,
+                      child: TargetAvatar(
+                        target: widget.target,
+                        size: 160,
+                        showLabel: false,
+                      ),
+                    ),
+                    if (_zapping)
+                      CustomPaint(
+                        size: const Size(200, 300),
+                        painter: _LightningBoltPainter(
+                          seed: _random.nextInt(1000),
+                        ),
+                      ),
+                    ...List.generate(_zaps, (i) {
+                      return Positioned(
+                        top: 60 + i * 20.0,
+                        child: Icon(
+                          Icons.flash_on,
+                          color: Colors.yellow.shade300,
+                          size: 40 + i * 8.0,
+                        ),
+                      );
+                    }),
+                  ],
                 ),
               ),
-            ...List.generate(_zaps, (i) {
-              return Positioned(
-                top: 60 + i * 20.0,
-                child: Icon(
-                  Icons.flash_on,
-                  color: Colors.yellow.shade300,
-                  size: 40 + i * 8.0,
-                ),
-              );
-            }),
-          ],
+            );
+          },
         ),
       ),
     );

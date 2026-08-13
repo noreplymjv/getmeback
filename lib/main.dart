@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 
 import 'router.dart';
+import 'services/vent_sfx.dart';
 import 'theme/app_theme.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
+  VentSfx.instance.init();
   runApp(const GetMeBackApp());
 }
 
