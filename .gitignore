@@ -1,0 +1,76 @@
+# Miscellaneous
+*.class
+*.log
+*.pyc
+*.swp
+.DS_Store
+.atom/
+.build/
+.buildlog/
+.history
+.svn/
+.swiftpm/
+migrate_working_dir/
+
+# IntelliJ related
+*.iml
+*.ipr
+*.iws
+.idea/
+
+# VS Code (uncomment to ignore local launch configs)
+#.vscode/
+
+# Flutter/Dart/Pub related
+**/doc/api/
+**/ios/Flutter/.last_build_id
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
+/build/
+/coverage/
+
+# Symbolication related
+app.*.symbols
+
+# Obfuscation related
+app.*.map.json
+
+# Android Studio build outputs
+/android/app/debug
+/android/app/profile
+/android/app/release
+
+# Android signing (never commit keystore or passwords)
+android/key.properties
+*.jks
+*.keystore
+
+# Android local SDK path (machine-specific)
+android/local.properties
+
+# Linux packaging output
+/dist/
+
+# Generated web demo copy (local install artifacts)
+/web-demo/
+
+# Local tooling / agent scratch
+.tooling/
+.agent-write-test
+.write-test
+write_test_*
+scripts/*.nohup.out
+
+# Copied install artifacts at project root (if any)
+*.apk
+*.aab
+*.ipa
+
+# Cursor agent local config
+.cursor/
+
+# Symlinked build output on DATA drive
+/build
