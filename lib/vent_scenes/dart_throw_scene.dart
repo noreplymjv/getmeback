@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../../models/vent_target.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/dramatic_fx.dart';
+import '../../widgets/scene_scale.dart';
 import '../../widgets/target_avatar.dart';
 import '../../widgets/vent_scene_shell.dart';
 
@@ -60,6 +61,8 @@ class _DartThrowSceneState extends State<DartThrowScene> {
     }
     if (_hits >= 8) {
       _fx.confettiBurst(at: _center, count: 70);
+      _fx.crackerBurst(at: _center, volleys: 4);
+      _fx.glitterRain(at: _center, count: 45);
       Future.delayed(const Duration(milliseconds: 900), () {
         if (mounted) context.go('/calm/${widget.target.id}');
       });
@@ -77,6 +80,8 @@ class _DartThrowSceneState extends State<DartThrowScene> {
         showTarget: false,
         child: LayoutBuilder(
           builder: (context, constraints) {
+            final scale = SceneScale(constraints);
+            final boardSize = scale.container(0.55);
             _center = Offset(
               constraints.maxWidth / 2,
               constraints.maxHeight / 2,
@@ -89,8 +94,8 @@ class _DartThrowSceneState extends State<DartThrowScene> {
                   alignment: Alignment.center,
                   children: [
                     Container(
-                      width: 220,
-                      height: 220,
+                      width: boardSize,
+                      height: boardSize,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         border: Border.all(color: AppTheme.calm, width: 4),
@@ -105,7 +110,7 @@ class _DartThrowSceneState extends State<DartThrowScene> {
                       child: Center(
                         child: TargetAvatar(
                           target: widget.target,
-                          size: 100,
+                          size: boardSize * 0.46,
                           showLabel: false,
                         ),
                       ),
@@ -116,9 +121,9 @@ class _DartThrowSceneState extends State<DartThrowScene> {
                         top: pos.dy - 12,
                         child: Transform.rotate(
                           angle: -pi / 4,
-                          child: const Icon(
+                          child: Icon(
                             Icons.push_pin,
-                            size: 24,
+                            size: scale.accent(0.055),
                             color: AppTheme.accent,
                           ),
                         ),

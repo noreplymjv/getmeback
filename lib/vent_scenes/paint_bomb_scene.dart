@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../models/vent_target.dart';
 import '../../widgets/dramatic_fx.dart';
+import '../../widgets/scene_scale.dart';
 import '../../widgets/target_avatar.dart';
 import '../../widgets/vent_scene_shell.dart';
 
@@ -70,6 +71,8 @@ class _PaintBombSceneState extends State<PaintBombScene> {
         showTarget: false,
         child: LayoutBuilder(
           builder: (context, constraints) {
+            final scale = SceneScale(constraints);
+            final avatarSize = scale.avatar(0.32);
             final center = Offset(
               constraints.maxWidth / 2,
               constraints.maxHeight * 0.45,
@@ -84,7 +87,7 @@ class _PaintBombSceneState extends State<PaintBombScene> {
                     children: [
                       TargetAvatar(
                         target: widget.target,
-                        size: 160,
+                        size: avatarSize,
                         showLabel: false,
                         opacity: 1 - _splats * 0.08,
                       ),
@@ -92,12 +95,12 @@ class _PaintBombSceneState extends State<PaintBombScene> {
                         final color = _paints[i % _paints.length];
                         return Transform.translate(
                           offset: Offset(
-                            sin(i * 1.7) * 40,
-                            cos(i * 2.1) * 36,
+                            sin(i * 1.7) * avatarSize * 0.3,
+                            cos(i * 2.1) * avatarSize * 0.27,
                           ),
                           child: Container(
-                            width: 36 + (i % 3) * 10,
-                            height: 28 + (i % 2) * 12,
+                            width: avatarSize * (0.26 + (i % 3) * 0.07),
+                            height: avatarSize * (0.2 + (i % 2) * 0.08),
                             decoration: BoxDecoration(
                               color: color.withValues(alpha: 0.7),
                               borderRadius: BorderRadius.circular(20),

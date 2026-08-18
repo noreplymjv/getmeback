@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../../models/vent_target.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/dramatic_fx.dart';
+import '../../widgets/scene_scale.dart';
 import '../../widgets/target_avatar.dart';
 import '../../widgets/vent_scene_shell.dart';
 
@@ -58,6 +59,8 @@ class _PunchBagSceneState extends State<PunchBagScene>
 
     if (_punches >= 10) {
       _fx.confettiBurst(at: bagCenter, count: 60);
+      _fx.crackerBurst(at: bagCenter, volleys: 4);
+      _fx.glitterRain(at: bagCenter, count: 40);
       Future.delayed(const Duration(milliseconds: 800), () {
         if (mounted) context.go('/calm/${widget.target.id}');
       });
@@ -76,6 +79,8 @@ class _PunchBagSceneState extends State<PunchBagScene>
         child: LayoutBuilder(
           builder: (context, constraints) {
             final area = Size(constraints.maxWidth, constraints.maxHeight);
+            final scale = SceneScale(constraints);
+            final bagWidth = scale.container(0.4);
             return GestureDetector(
               onTap: () => _punch(area),
               child: ventFxLayer(
@@ -96,15 +101,15 @@ class _PunchBagSceneState extends State<PunchBagScene>
                       children: [
                         Container(
                           width: 8,
-                          height: 60,
+                          height: bagWidth * 0.42,
                           color: Colors.grey.shade600,
                         ),
                         Container(
-                          width: 140,
-                          height: 180,
+                          width: bagWidth,
+                          height: bagWidth * 1.28,
                           decoration: BoxDecoration(
                             color: AppTheme.accent,
-                            borderRadius: BorderRadius.circular(70),
+                            borderRadius: BorderRadius.circular(bagWidth / 2),
                             boxShadow: [
                               BoxShadow(
                                 color: AppTheme.accent.withValues(alpha: 0.4),
@@ -115,7 +120,7 @@ class _PunchBagSceneState extends State<PunchBagScene>
                           child: Center(
                             child: TargetAvatar(
                               target: widget.target,
-                              size: 90,
+                              size: bagWidth * 0.6,
                               showLabel: false,
                             ),
                           ),
@@ -123,8 +128,8 @@ class _PunchBagSceneState extends State<PunchBagScene>
                         const SizedBox(height: 16),
                         Text(
                           _punches >= 5 ? 'Keep going! 🥊' : 'POW!',
-                          style: const TextStyle(
-                            fontSize: 20,
+                          style: TextStyle(
+                            fontSize: scale.accent(0.05),
                             fontWeight: FontWeight.bold,
                             color: AppTheme.accentSecondary,
                           ),

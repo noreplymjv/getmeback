@@ -5,6 +5,7 @@ import '../../models/vent_target.dart';
 import '../../services/vent_sfx.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/dramatic_fx.dart';
+import '../../widgets/scene_scale.dart';
 import '../../widgets/target_avatar.dart';
 import '../../widgets/vent_scene_shell.dart';
 
@@ -58,6 +59,8 @@ class _IceShatterSceneState extends State<IceShatterScene> {
       setState(() => _shattered = true);
       _fx.megaImpact(at: center, color: AppTheme.accentSecondary);
       _fx.confettiBurst(at: center, count: 60);
+      _fx.crackerBurst(at: center, volleys: 4);
+      _fx.glitterRain(at: center, count: 45);
       Future.delayed(const Duration(milliseconds: 1000), () {
         if (mounted) context.go('/calm/${widget.target.id}');
       });
@@ -79,6 +82,8 @@ class _IceShatterSceneState extends State<IceShatterScene> {
         showTarget: false,
         child: LayoutBuilder(
           builder: (context, constraints) {
+            final scale = SceneScale(constraints);
+            final avatarSize = scale.avatar(0.3);
             final center = Offset(
               constraints.maxWidth / 2,
               constraints.maxHeight * 0.45,
@@ -94,11 +99,11 @@ class _IceShatterSceneState extends State<IceShatterScene> {
                         ? Icon(
                             Icons.ac_unit,
                             key: const ValueKey('done'),
-                            size: 80,
+                            size: scale.prop(0.2),
                             color: AppTheme.accentSecondary
                                 .withValues(alpha: 0.5),
                           )
-                        : _buildIceBlock(),
+                        : _buildIceBlock(avatarSize),
                   ),
                 ),
               ),
@@ -109,10 +114,10 @@ class _IceShatterSceneState extends State<IceShatterScene> {
     );
   }
 
-  Widget _buildIceBlock() {
+  Widget _buildIceBlock(double avatarSize) {
     return Container(
       key: const ValueKey('ice'),
-      padding: const EdgeInsets.all(24),
+      padding: EdgeInsets.all(avatarSize * 0.14),
       decoration: BoxDecoration(
         color: _frozen
             ? AppTheme.accentSecondary.withValues(alpha: 0.35)
@@ -134,10 +139,14 @@ class _IceShatterSceneState extends State<IceShatterScene> {
         mainAxisSize: MainAxisSize.min,
         children: [
           if (_frozen)
-            const Icon(Icons.ac_unit, size: 32, color: AppTheme.accentSecondary),
+            Icon(
+              Icons.ac_unit,
+              size: avatarSize * 0.24,
+              color: AppTheme.accentSecondary,
+            ),
           TargetAvatar(
             target: widget.target,
-            size: 140,
+            size: avatarSize,
             showLabel: false,
             opacity: _frozen ? 0.7 : 1.0,
           ),

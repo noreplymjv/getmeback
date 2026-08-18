@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../models/vent_target.dart';
 import '../../services/vent_sfx.dart';
 import '../../widgets/dramatic_fx.dart';
+import '../../widgets/scene_scale.dart';
 import '../../widgets/target_avatar.dart';
 import '../../widgets/vent_scene_shell.dart';
 
@@ -75,6 +76,9 @@ class _BoxingKoSceneState extends State<BoxingKoScene>
         showTarget: false,
         child: LayoutBuilder(
           builder: (context, constraints) {
+            final scale = SceneScale(constraints);
+            final avatarSize = scale.avatar(0.32);
+            final gloveSize = scale.prop(0.17);
             final center = Offset(
               constraints.maxWidth / 2,
               constraints.maxHeight * 0.45,
@@ -92,7 +96,7 @@ class _BoxingKoSceneState extends State<BoxingKoScene>
                         opacity: _ko ? 0.35 : 1,
                         child: TargetAvatar(
                           target: widget.target,
-                          size: 160,
+                          size: avatarSize,
                           showLabel: false,
                         ),
                       ),
@@ -102,22 +106,25 @@ class _BoxingKoSceneState extends State<BoxingKoScene>
                       builder: (context, child) {
                         final t = Curves.easeOut.transform(_glove.value);
                         return Transform.translate(
-                          offset: Offset(-90 + t * 110, 40 - t * 20),
+                          offset: Offset(
+                            -avatarSize * 0.7 + t * avatarSize * 0.8,
+                            avatarSize * 0.28 - t * avatarSize * 0.14,
+                          ),
                           child: Opacity(
                             opacity: t < 0.15 ? 0 : 1 - (t - 0.5).clamp(0, 0.5) * 2,
                             child: child,
                           ),
                         );
                       },
-                      child: const Text('🥊', style: TextStyle(fontSize: 64)),
+                      child: Text('🥊', style: TextStyle(fontSize: gloveSize)),
                     ),
                     if (_ko)
-                      const Text(
+                      Text(
                         '★ K.O. ★',
                         style: TextStyle(
-                          fontSize: 42,
+                          fontSize: scale.accent(0.1),
                           fontWeight: FontWeight.w900,
-                          color: Color(0xFFFFD54F),
+                          color: const Color(0xFFFFD54F),
                         ),
                       ),
                   ],

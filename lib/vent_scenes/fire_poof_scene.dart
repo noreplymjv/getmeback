@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../../models/vent_target.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/dramatic_fx.dart';
+import '../../widgets/scene_scale.dart';
 import '../../widgets/target_avatar.dart';
 import '../../widgets/vent_scene_shell.dart';
 
@@ -98,6 +99,9 @@ class _FirePoofSceneState extends State<FirePoofScene>
         child: LayoutBuilder(
           builder: (context, constraints) {
             final area = Size(constraints.maxWidth, constraints.maxHeight);
+            final scale = SceneScale(constraints);
+            final avatarSize = scale.avatar(0.32);
+            final flameBase = scale.prop(0.12);
             return GestureDetector(
               onTap: () => _ignite(area),
               child: ventFxLayer(
@@ -111,7 +115,7 @@ class _FirePoofSceneState extends State<FirePoofScene>
                         opacity: 1 - _burnProgress,
                         child: TargetAvatar(
                           target: widget.target,
-                          size: 160,
+                          size: avatarSize,
                           showLabel: false,
                         ),
                       ),
@@ -120,11 +124,12 @@ class _FirePoofSceneState extends State<FirePoofScene>
                           return AnimatedBuilder(
                             animation: _flameController,
                             builder: (context, _) {
-                              final offset = (i - 2) * 30.0;
-                              final height =
-                                  40 + _flameController.value * 30 + i * 10;
+                              final offset = (i - 2) * (avatarSize * 0.2);
+                              final height = flameBase +
+                                  _flameController.value * flameBase * 0.7 +
+                                  i * flameBase * 0.18;
                               return Positioned(
-                                bottom: 80 + _burnProgress * 20,
+                                bottom: avatarSize * 0.5 + _burnProgress * 20,
                                 left: offset,
                                 child: Icon(
                                   Icons.local_fire_department,
@@ -143,7 +148,7 @@ class _FirePoofSceneState extends State<FirePoofScene>
                         Text(
                           'POOF!',
                           style: TextStyle(
-                            fontSize: 36,
+                            fontSize: scale.accent(0.085),
                             fontWeight: FontWeight.bold,
                             color: AppTheme.accent.withValues(alpha: _burnProgress),
                           ),

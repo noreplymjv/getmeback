@@ -5,6 +5,7 @@ import '../../models/vent_target.dart';
 import '../../theme/app_theme.dart';
 import '../../services/vent_sfx.dart';
 import '../../widgets/dramatic_fx.dart';
+import '../../widgets/scene_scale.dart';
 import '../../widgets/target_avatar.dart';
 import '../../widgets/vent_scene_shell.dart';
 
@@ -41,6 +42,8 @@ class _BalloonPopSceneState extends State<BalloonPopScene> {
     VentSfx.instance.play(Sfx.pop);
     _fx.megaImpact(at: center, color: AppTheme.accent);
     _fx.confettiBurst(at: center, count: 90);
+    _fx.crackerBurst(at: center, volleys: 5);
+    _fx.glitterRain(at: center, count: 55);
     Future.delayed(const Duration(milliseconds: 1200), () {
       if (mounted) context.go('/calm/${widget.target.id}');
     });
@@ -73,7 +76,7 @@ class _BalloonPopSceneState extends State<BalloonPopScene> {
                     child: AnimatedOpacity(
                       opacity: _popped ? 0 : 1,
                       duration: const Duration(milliseconds: 350),
-                      child: _buildBalloon(),
+                      child: _buildBalloon(SceneScale(constraints)),
                     ),
                   ),
                 ),
@@ -85,13 +88,14 @@ class _BalloonPopSceneState extends State<BalloonPopScene> {
     );
   }
 
-  Widget _buildBalloon() {
+  Widget _buildBalloon(SceneScale scale) {
+    final balloonWidth = scale.container(0.42);
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
         Container(
-          width: 160,
-          height: 200,
+          width: balloonWidth,
+          height: balloonWidth * 1.25,
           decoration: BoxDecoration(
             color: AppTheme.accent.withValues(alpha: 0.3),
             shape: BoxShape.circle,
@@ -107,12 +111,16 @@ class _BalloonPopSceneState extends State<BalloonPopScene> {
           child: Center(
             child: TargetAvatar(
               target: widget.target,
-              size: 90,
+              size: balloonWidth * 0.56,
               showLabel: false,
             ),
           ),
         ),
-        Container(width: 2, height: 80, color: Colors.grey.shade500),
+        Container(
+          width: 2,
+          height: balloonWidth * 0.5,
+          color: Colors.grey.shade500,
+        ),
       ],
     );
   }

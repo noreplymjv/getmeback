@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../models/vent_target.dart';
 import '../../services/vent_sfx.dart';
 import '../../widgets/dramatic_fx.dart';
+import '../../widgets/scene_scale.dart';
 import '../../widgets/target_avatar.dart';
 import '../../widgets/vent_scene_shell.dart';
 
@@ -72,6 +73,9 @@ class _AnvilDropSceneState extends State<AnvilDropScene>
         showTarget: false,
         child: LayoutBuilder(
           builder: (context, constraints) {
+            final scale = SceneScale(constraints);
+            final anvilSize = scale.prop(0.2);
+            final dropFrom = scale.travel(0.42);
             final center = Offset(
               constraints.maxWidth / 2,
               constraints.maxHeight * 0.55,
@@ -87,14 +91,16 @@ class _AnvilDropSceneState extends State<AnvilDropScene>
                       scaleY: (1 - _drops * 0.22).clamp(0.28, 1.0),
                       child: TargetAvatar(
                         target: widget.target,
-                        size: 150,
+                        size: scale.avatar(0.3),
                         showLabel: false,
                       ),
                     ),
                     AnimatedBuilder(
                       animation: _drop,
                       builder: (context, child) {
-                        final y = -220 + Curves.easeIn.transform(_drop.value) * 280;
+                        final y = -dropFrom +
+                            Curves.easeIn.transform(_drop.value) *
+                                (dropFrom + anvilSize * 0.6);
                         return Transform.translate(
                           offset: Offset(0, y),
                           child: Opacity(
@@ -103,13 +109,9 @@ class _AnvilDropSceneState extends State<AnvilDropScene>
                           ),
                         );
                       },
-                      child: Icon(
-                        Icons.square,
-                        size: 88,
-                        color: Colors.blueGrey.shade300,
-                        shadows: const [
-                          Shadow(blurRadius: 12, color: Colors.black54),
-                        ],
+                      child: CustomPaint(
+                        size: Size(anvilSize * 1.25, anvilSize),
+                        painter: _AnvilPainter(),
                       ),
                     ),
                   ],
@@ -121,4 +123,44 @@ class _AnvilDropSceneState extends State<AnvilDropScene>
       ),
     );
   }
+}
+
+class _AnvilPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final w = size.width;
+    final h = size.height;
+    final body = Paint()
+      ..shader = const LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [Color(0xFF9AA7B1), Color(0xFF4A5560)],
+      ).createShader(Rect.fromLTWH(0, 0, w, h));
+
+    final path = Path()
+      ..moveTo(w * 0.06, h * 0.16)
+      ..lineTo(w * 0.94, h * 0.16)
+      ..lineTo(w * 0.8, h * 0.42)
+      ..lineTo(w * 0.62, h * 0.42)
+      ..lineTo(w * 0.62, h * 0.72)
+      ..lineTo(w * 0.82, h)
+      ..lineTo(w * 0.18, h)
+      ..lineTo(w * 0.38, h * 0.72)
+      ..lineTo(w * 0.38, h * 0.42)
+      ..lineTo(w * 0.2, h * 0.42)
+      ..close();
+    canvas.drawShadow(path, const Color(0xAA000000), 6, false);
+    canvas.drawPath(path, body);
+
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromLTWH(w * 0.06, h * 0.1, w * 0.88, h * 0.12),
+        Radius.circular(h * 0.06),
+      ),
+      Paint()..color = const Color(0xFFC3CDD6),
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _AnvilPainter oldDelegate) => false;
 }

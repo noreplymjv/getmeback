@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../models/vent_target.dart';
 import '../../services/vent_sfx.dart';
 import '../../widgets/dramatic_fx.dart';
+import '../../widgets/scene_scale.dart';
 import '../../widgets/target_avatar.dart';
 import '../../widgets/vent_scene_shell.dart';
 
@@ -69,6 +70,8 @@ class _VolcanoSceneState extends State<VolcanoScene>
         showTarget: false,
         child: LayoutBuilder(
           builder: (context, constraints) {
+            final scale = SceneScale(constraints);
+            final mountainWidth = scale.container(0.62);
             final center = Offset(
               constraints.maxWidth / 2,
               constraints.maxHeight * 0.42,
@@ -90,32 +93,34 @@ class _VolcanoSceneState extends State<VolcanoScene>
                     alignment: Alignment.center,
                     children: [
                       Positioned(
-                        bottom: 70,
+                        bottom: constraints.maxHeight * 0.14,
                         child: CustomPaint(
-                          size: const Size(260, 160),
+                          size: Size(mountainWidth, mountainWidth * 0.62),
                           painter: _VolcanoPainter(heat: _stokes / 5),
                         ),
                       ),
                       Positioned(
-                        bottom: 180 + (_erupted ? 220.0 : 0),
+                        bottom: constraints.maxHeight * 0.14 +
+                            mountainWidth * 0.55 +
+                            (_erupted ? scale.travel(0.5) : 0),
                         child: Opacity(
                           opacity: _erupted ? 0.2 : 1,
                           child: TargetAvatar(
                             target: widget.target,
-                            size: 100,
+                            size: scale.avatar(0.22),
                             showLabel: false,
                           ),
                         ),
                       ),
                       if (_erupted)
-                        const Positioned(
-                          top: 40,
+                        Positioned(
+                          top: constraints.maxHeight * 0.08,
                           child: Text(
                             'KABOOM!',
                             style: TextStyle(
-                              fontSize: 36,
+                              fontSize: scale.accent(0.085),
                               fontWeight: FontWeight.w900,
-                              color: Color(0xFFFFD54F),
+                              color: const Color(0xFFFFD54F),
                             ),
                           ),
                         ),

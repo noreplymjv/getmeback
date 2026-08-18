@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../../models/vent_target.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/dramatic_fx.dart';
+import '../../widgets/scene_scale.dart';
 import '../../widgets/target_avatar.dart';
 import '../../widgets/vent_scene_shell.dart';
 
@@ -63,6 +64,8 @@ class _CatapultSceneState extends State<CatapultScene>
     _fx.smokeBurst(at: Offset(_center.dx, _center.dy + 60), count: 14);
     await _launchController.forward();
     _fx.confettiBurst(at: _center.translate(180, -100), count: 50);
+    _fx.crackerBurst(at: _center.translate(180, -100), volleys: 4);
+    _fx.glitterRain(at: _center.translate(180, -100), count: 40);
     if (mounted) context.go('/calm/${widget.target.id}');
   }
 
@@ -78,6 +81,8 @@ class _CatapultSceneState extends State<CatapultScene>
         child: LayoutBuilder(
           builder: (context, constraints) {
             final area = Size(constraints.maxWidth, constraints.maxHeight);
+            final scale = SceneScale(constraints);
+            final rigWidth = scale.container(0.5);
             _center = Offset(area.width / 2, area.height * 0.5);
             return ventFxLayer(
               fx: _fx,
@@ -90,9 +95,9 @@ class _CatapultSceneState extends State<CatapultScene>
                   alignment: Alignment.center,
                   children: [
                     Positioned(
-                      bottom: 80,
+                      bottom: area.height * 0.18,
                       child: CustomPaint(
-                        size: const Size(200, 100),
+                        size: Size(rigWidth, rigWidth * 0.5),
                         painter: _CatapultPainter(),
                       ),
                     ),
@@ -100,8 +105,9 @@ class _CatapultSceneState extends State<CatapultScene>
                       animation: _launchController,
                       builder: (context, child) {
                         final t = Curves.easeOut.transform(_launchController.value);
-                        final x = sin(t * pi) * 180;
-                        final y = -sin(t * pi) * 280 + t * 100;
+                        final x = sin(t * pi) * area.width * 0.4;
+                        final y = -sin(t * pi) * area.height * 0.55 +
+                            t * area.height * 0.2;
                         final rotation = t * pi * 2;
                         final opacity = 1 - t * 0.8;
                         return Transform.translate(
@@ -114,17 +120,17 @@ class _CatapultSceneState extends State<CatapultScene>
                       },
                       child: TargetAvatar(
                         target: widget.target,
-                        size: 90,
+                        size: scale.avatar(0.24),
                         showLabel: false,
                       ),
                     ),
                     if (!_launched)
                       Positioned(
-                        bottom: 200,
+                        bottom: area.height * 0.45,
                         child: Icon(
                           Icons.arrow_upward,
                           color: AppTheme.accentSecondary.withValues(alpha: 0.6),
-                          size: 32,
+                          size: scale.accent(0.07),
                         ),
                       ),
                   ],

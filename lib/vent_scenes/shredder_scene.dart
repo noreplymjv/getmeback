@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../models/vent_target.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/dramatic_fx.dart';
+import '../../widgets/scene_scale.dart';
 import '../../widgets/target_avatar.dart';
 import '../../widgets/vent_scene_shell.dart';
 
@@ -70,6 +71,8 @@ class _ShredderSceneState extends State<ShredderScene>
     _bladeController.stop();
     _fx.megaImpact(at: Offset(_center.dx, _center.dy + 80));
     _fx.debrisRain(at: Offset(_center.dx, _center.dy + 80), count: 35);
+    _fx.crackerBurst(at: Offset(_center.dx, _center.dy + 80), volleys: 4);
+    _fx.glitterRain(at: Offset(_center.dx, _center.dy + 80), count: 40);
     if (mounted) {
       await Future.delayed(const Duration(milliseconds: 700));
       if (mounted) context.go('/calm/${widget.target.id}');
@@ -87,6 +90,9 @@ class _ShredderSceneState extends State<ShredderScene>
         showTarget: false,
         child: LayoutBuilder(
           builder: (context, constraints) {
+            final scale = SceneScale(constraints);
+            final trayWidth = scale.container(0.5);
+            final avatarSize = scale.avatar(0.24);
             _center = Offset(
               constraints.maxWidth / 2,
               constraints.maxHeight * 0.35,
@@ -97,12 +103,12 @@ class _ShredderSceneState extends State<ShredderScene>
                 alignment: Alignment.center,
                 children: [
                   Positioned(
-                    bottom: 80,
+                    bottom: constraints.maxHeight * 0.16,
                     child: Column(
                       children: [
                         Container(
-                          width: 200,
-                          height: 30,
+                          width: trayWidth,
+                          height: trayWidth * 0.15,
                           decoration: BoxDecoration(
                             color: Colors.grey.shade800,
                             borderRadius: BorderRadius.circular(4),
@@ -127,8 +133,8 @@ class _ShredderSceneState extends State<ShredderScene>
                           ),
                         ),
                         Container(
-                          width: 180,
-                          height: 120,
+                          width: trayWidth * 0.9,
+                          height: trayWidth * 0.6,
                           decoration: BoxDecoration(
                             color: AppTheme.card,
                             borderRadius: const BorderRadius.vertical(
@@ -156,7 +162,8 @@ class _ShredderSceneState extends State<ShredderScene>
                     ),
                   ),
                   Positioned(
-                    top: 80 + _shredProgress * 200,
+                    top: constraints.maxHeight * 0.12 +
+                        _shredProgress * constraints.maxHeight * 0.35,
                     child: Transform.scale(
                       scale: 1 - _shredProgress * 0.8,
                       child: Opacity(
@@ -164,7 +171,7 @@ class _ShredderSceneState extends State<ShredderScene>
                         child: _shredding
                             ? TargetAvatar(
                                 target: widget.target,
-                                size: 90,
+                                size: avatarSize * 0.9,
                                 showLabel: false,
                               )
                             : Draggable(
@@ -172,7 +179,7 @@ class _ShredderSceneState extends State<ShredderScene>
                                   color: Colors.transparent,
                                   child: TargetAvatar(
                                     target: widget.target,
-                                    size: 80,
+                                    size: avatarSize * 0.8,
                                     showLabel: false,
                                   ),
                                 ),
@@ -181,7 +188,7 @@ class _ShredderSceneState extends State<ShredderScene>
                                 },
                                 child: TargetAvatar(
                                   target: widget.target,
-                                  size: 100,
+                                  size: avatarSize,
                                   showLabel: false,
                                 ),
                               ),

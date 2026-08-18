@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../models/vent_target.dart';
 import '../../widgets/dramatic_fx.dart';
+import '../../widgets/scene_scale.dart';
 import '../../widgets/target_avatar.dart';
 import '../../widgets/vent_scene_shell.dart';
 
@@ -54,7 +55,9 @@ class _LightningSceneState extends State<LightningScene> {
     });
     if (_zaps >= 4) {
       _fx.megaImpact(at: _center, color: Colors.yellowAccent);
-      await Future.delayed(const Duration(milliseconds: 800));
+      _fx.crackerBurst(at: _center, volleys: 5);
+      _fx.glitterRain(at: _center, count: 48);
+      await Future.delayed(const Duration(milliseconds: 900));
       if (mounted) context.go('/calm/${widget.target.id}');
     }
   }
@@ -73,6 +76,8 @@ class _LightningSceneState extends State<LightningScene> {
         child: LayoutBuilder(
           builder: (context, constraints) {
             final area = Size(constraints.maxWidth, constraints.maxHeight);
+            final scale = SceneScale(constraints);
+            final avatarSize = scale.avatar(0.32);
             _center = Offset(area.width / 2, area.height * 0.5);
             return ventFxLayer(
               fx: _fx,
@@ -91,24 +96,24 @@ class _LightningSceneState extends State<LightningScene> {
                       opacity: 1 - _zaps * 0.2,
                       child: TargetAvatar(
                         target: widget.target,
-                        size: 160,
+                        size: avatarSize,
                         showLabel: false,
                       ),
                     ),
                     if (_zapping)
                       CustomPaint(
-                        size: const Size(200, 300),
+                        size: Size(avatarSize * 1.2, area.height * 0.6),
                         painter: _LightningBoltPainter(
                           seed: _random.nextInt(1000),
                         ),
                       ),
                     ...List.generate(_zaps, (i) {
                       return Positioned(
-                        top: 60 + i * 20.0,
+                        top: area.height * 0.16 + i * (avatarSize * 0.12),
                         child: Icon(
                           Icons.flash_on,
                           color: Colors.yellow.shade300,
-                          size: 40 + i * 8.0,
+                          size: scale.accent(0.08) + i * 5.0,
                         ),
                       );
                     }),

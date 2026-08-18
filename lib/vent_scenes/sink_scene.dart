@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../models/vent_target.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/dramatic_fx.dart';
+import '../../widgets/scene_scale.dart';
 import '../../widgets/target_avatar.dart';
 import '../../widgets/vent_scene_shell.dart';
 
@@ -56,6 +57,8 @@ class _SinkSceneState extends State<SinkScene> {
     }
     _fx.megaImpact(at: _center, color: const Color(0xFF4FC3F7));
     _fx.comicPop(at: _center, text: 'GLUB!', color: const Color(0xFF4FC3F7));
+    _fx.crackerBurst(at: _center, volleys: 3);
+    _fx.glitterRain(at: _center, count: 36);
     if (mounted) {
       await Future.delayed(const Duration(milliseconds: 600));
       if (mounted) context.go('/calm/${widget.target.id}');
@@ -73,6 +76,9 @@ class _SinkSceneState extends State<SinkScene> {
         showTarget: false,
         child: LayoutBuilder(
           builder: (context, constraints) {
+            final scale = SceneScale(constraints);
+            final sinkWidth = scale.container(0.6);
+            final sinkHeight = sinkWidth * 0.77;
             _center = Offset(
               constraints.maxWidth / 2,
               constraints.maxHeight * 0.55,
@@ -85,10 +91,10 @@ class _SinkSceneState extends State<SinkScene> {
                   alignment: Alignment.center,
                   children: [
                     Positioned(
-                      bottom: 60,
+                      bottom: constraints.maxHeight * 0.12,
                       child: Container(
-                        width: 260,
-                        height: 200,
+                        width: sinkWidth,
+                        height: sinkHeight,
                         decoration: BoxDecoration(
                           color: AppTheme.card,
                           borderRadius: BorderRadius.circular(16),
@@ -102,7 +108,7 @@ class _SinkSceneState extends State<SinkScene> {
                                 alignment: Alignment.bottomCenter,
                                 child: AnimatedContainer(
                                   duration: const Duration(milliseconds: 100),
-                                  height: 200 * _waterLevel,
+                                  height: sinkHeight * _waterLevel,
                                   width: double.infinity,
                                   color: const Color(0xFF4FC3F7).withValues(alpha: 0.7),
                                 ),
@@ -111,7 +117,7 @@ class _SinkSceneState extends State<SinkScene> {
                                 Center(
                                   child: Icon(
                                     Icons.water,
-                                    size: 40,
+                                    size: scale.accent(0.09),
                                     color: Colors.white.withValues(alpha: _waterLevel),
                                   ),
                                 ),
@@ -121,14 +127,16 @@ class _SinkSceneState extends State<SinkScene> {
                       ),
                     ),
                     Positioned(
-                      bottom: 120 + (1 - _waterLevel) * 80,
+                      bottom: constraints.maxHeight * 0.12 +
+                          sinkHeight * 0.35 +
+                          (1 - _waterLevel) * sinkHeight * 0.35,
                       child: Transform.scale(
                         scale: 1 - _waterLevel * 0.5,
                         child: Opacity(
                           opacity: 1 - _waterLevel * 0.9,
                           child: TargetAvatar(
                             target: widget.target,
-                            size: 100,
+                            size: sinkWidth * 0.4,
                             showLabel: false,
                           ),
                         ),
@@ -136,11 +144,11 @@ class _SinkSceneState extends State<SinkScene> {
                     ),
                     if (_waterLevel > 0.5)
                       Positioned(
-                        top: 100,
+                        top: constraints.maxHeight * 0.16,
                         child: Text(
                           'Glub glub...',
                           style: TextStyle(
-                            fontSize: 20,
+                            fontSize: scale.accent(0.05),
                             color: const Color(0xFF4FC3F7).withValues(alpha: _waterLevel),
                             fontStyle: FontStyle.italic,
                           ),

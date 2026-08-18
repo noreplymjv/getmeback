@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../models/vent_target.dart';
 import '../../widgets/dramatic_fx.dart';
+import '../../widgets/scene_scale.dart';
 import '../../widgets/target_avatar.dart';
 import '../../widgets/vent_scene_shell.dart';
 
@@ -50,11 +51,14 @@ class _StompSceneState extends State<StompScene>
     if (_stomps >= 4) {
       _fx.megaImpact(at: center);
       _fx.comicPop(at: center, text: 'SQUISH!');
+      _fx.crackerBurst(at: center, volleys: 2, playSound: false);
     } else {
       _fx.impact(at: center, count: 30 + _stomps * 5, intensity: 1.1);
     }
     if (_stomps >= 6) {
-      Future.delayed(const Duration(milliseconds: 800), () {
+      _fx.crackerBurst(at: center, volleys: 4);
+      _fx.glitterRain(at: center, count: 40);
+      Future.delayed(const Duration(milliseconds: 900), () {
         if (mounted) context.go('/calm/${widget.target.id}');
       });
     }
@@ -71,6 +75,9 @@ class _StompSceneState extends State<StompScene>
         showTarget: false,
         child: LayoutBuilder(
           builder: (context, constraints) {
+            final scale = SceneScale(constraints);
+            final avatarSize = scale.avatar(0.32);
+            final shoeSize = scale.prop(0.2);
             final center = Offset(
               constraints.maxWidth / 2,
               constraints.maxHeight * 0.5,
@@ -86,23 +93,24 @@ class _StompSceneState extends State<StompScene>
                       scaleY: _flatness,
                       child: TargetAvatar(
                         target: widget.target,
-                        size: 160,
+                        size: avatarSize,
                         showLabel: false,
                       ),
                     ),
                     AnimatedBuilder(
                       animation: _footController,
                       builder: (context, child) {
-                        final y = -80 + _footController.value * 160;
+                        final y = -avatarSize * 0.55 +
+                            _footController.value * avatarSize * 1.1;
                         return Transform.translate(
                           offset: Offset(0, y),
                           child: Opacity(
                             opacity: _footController.value < 0.5
                                 ? 1
                                 : 1 - (_footController.value - 0.5) * 2,
-                            child: const Text(
+                            child: Text(
                               '👟',
-                              style: TextStyle(fontSize: 72),
+                              style: TextStyle(fontSize: shoeSize),
                             ),
                           ),
                         );

@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../../models/vent_target.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/dramatic_fx.dart';
+import '../../widgets/scene_scale.dart';
 import '../../widgets/target_avatar.dart';
 import '../../widgets/vent_scene_shell.dart';
 
@@ -61,6 +62,8 @@ class _PinataSceneState extends State<PinataScene>
       setState(() => _broken = true);
       _swingController.stop();
       _fx.confettiBurst(at: pinataCenter, count: 80);
+      _fx.crackerBurst(at: pinataCenter, volleys: 5);
+      _fx.glitterRain(at: pinataCenter, count: 55);
       Future.delayed(const Duration(milliseconds: 1200), () {
         if (mounted) context.go('/calm/${widget.target.id}');
       });
@@ -81,6 +84,8 @@ class _PinataSceneState extends State<PinataScene>
         child: LayoutBuilder(
           builder: (context, constraints) {
             final area = Size(constraints.maxWidth, constraints.maxHeight);
+            final scale = SceneScale(constraints);
+            final potWidth = scale.container(0.4);
             return GestureDetector(
               onTap: () => _hit(area),
               child: ventFxLayer(
@@ -103,12 +108,12 @@ class _PinataSceneState extends State<PinataScene>
                           children: [
                             Container(
                               width: 4,
-                              height: 60,
+                              height: potWidth * 0.42,
                               color: Colors.brown.shade400,
                             ),
                             Container(
-                              width: 140,
-                              height: 180,
+                              width: potWidth,
+                              height: potWidth * 1.28,
                               decoration: BoxDecoration(
                                 color: AppTheme.accent.withValues(alpha: 0.4),
                                 borderRadius: BorderRadius.circular(20),
@@ -120,7 +125,7 @@ class _PinataSceneState extends State<PinataScene>
                               child: Center(
                                 child: TargetAvatar(
                                   target: widget.target,
-                                  size: 80,
+                                  size: potWidth * 0.56,
                                   showLabel: false,
                                   cracks: (_hits / 2).floor(),
                                 ),
@@ -131,13 +136,14 @@ class _PinataSceneState extends State<PinataScene>
                       ),
                     if (_broken)
                       SizedBox(
-                        width: 250,
-                        height: 250,
+                        width: potWidth * 1.8,
+                        height: potWidth * 1.8,
                         child: Stack(
                           alignment: Alignment.center,
                           children: List.generate(16, (i) {
                             final angle = i * pi / 8;
-                            final dist = 40 + _random.nextDouble() * 80;
+                            final dist = potWidth *
+                                (0.28 + _random.nextDouble() * 0.56);
                             return Transform.translate(
                               offset: Offset(
                                 cos(angle) * dist,
@@ -155,7 +161,8 @@ class _PinataSceneState extends State<PinataScene>
                                   AppTheme.calm,
                                   Colors.yellow,
                                 ][i % 4],
-                                size: 20 + _random.nextDouble() * 20,
+                                size: scale.accent(0.045) +
+                                    _random.nextDouble() * 16,
                               ),
                             );
                           }),
@@ -163,10 +170,10 @@ class _PinataSceneState extends State<PinataScene>
                       ),
                     if (!_broken)
                       Positioned(
-                        top: 40,
+                        top: area.height * 0.1,
                         child: Icon(
                           Icons.sports_cricket,
-                          size: 48,
+                          size: scale.prop(0.12),
                           color: Colors.brown.shade300,
                         ),
                       ),

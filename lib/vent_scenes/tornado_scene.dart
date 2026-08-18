@@ -7,6 +7,7 @@ import '../../models/vent_target.dart';
 import '../../services/vent_sfx.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/dramatic_fx.dart';
+import '../../widgets/scene_scale.dart';
 import '../../widgets/target_avatar.dart';
 import '../../widgets/vent_scene_shell.dart';
 
@@ -76,6 +77,8 @@ class _TornadoSceneState extends State<TornadoScene>
               constraints.maxWidth / 2,
               constraints.maxHeight * 0.48,
             );
+            final sceneScale = SceneScale(constraints);
+            final avatarSize = sceneScale.avatar(0.26);
             return GestureDetector(
               onTap: () => _gust(center),
               child: ventFxLayer(
@@ -85,7 +88,8 @@ class _TornadoSceneState extends State<TornadoScene>
                     animation: _spin,
                     builder: (context, child) {
                       final t = _spin.value * pi * 2;
-                      final lift = _sucked ? -180.0 : _gusts * -8.0;
+                      final lift =
+                          _sucked ? -sceneScale.travel(0.4) : _gusts * -8.0;
                       final scale = _sucked ? 0.05 : 1 - _gusts * 0.08;
                       return Transform.translate(
                         offset: Offset(sin(t) * (18 + _gusts * 4.0), lift),
@@ -103,12 +107,12 @@ class _TornadoSceneState extends State<TornadoScene>
                       children: [
                         Icon(
                           Icons.cyclone,
-                          size: 72 + _gusts * 6,
+                          size: avatarSize * 0.62 + _gusts * 5,
                           color: AppTheme.accentSecondary.withValues(alpha: 0.7),
                         ),
                         TargetAvatar(
                           target: widget.target,
-                          size: 120,
+                          size: avatarSize,
                           showLabel: false,
                         ),
                       ],

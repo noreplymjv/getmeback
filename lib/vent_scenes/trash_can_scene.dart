@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../models/vent_target.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/dramatic_fx.dart';
+import '../../widgets/scene_scale.dart';
 import '../../widgets/target_avatar.dart';
 import '../../widgets/vent_scene_shell.dart';
 
@@ -45,7 +46,9 @@ class _TrashCanSceneState extends State<TrashCanScene> {
       if (!mounted) return;
       setState(() => _throwProgress = i / 15);
     }
-    _fx.confettiBurst(at: _center);
+    _fx.confettiBurst(at: _center, count: 70);
+    _fx.crackerBurst(at: _center, volleys: 4);
+    _fx.glitterRain(at: _center, count: 40);
     if (mounted) context.go('/calm/${widget.target.id}');
   }
 
@@ -68,6 +71,9 @@ class _TrashCanSceneState extends State<TrashCanScene> {
         child: LayoutBuilder(
           builder: (context, constraints) {
             final area = Size(constraints.maxWidth, constraints.maxHeight);
+            final scale = SceneScale(constraints);
+            final binWidth = scale.container(0.38);
+            final avatarSize = scale.avatar(0.24);
             _center = Offset(area.width / 2, area.height * 0.5);
             return ventFxLayer(
               fx: _fx,
@@ -75,20 +81,20 @@ class _TrashCanSceneState extends State<TrashCanScene> {
                 alignment: Alignment.center,
                 children: [
                   Positioned(
-                    bottom: 100,
+                    bottom: area.height * 0.18,
                     child: Column(
                       children: [
                         Container(
-                          width: 160,
-                          height: 20,
+                          width: binWidth * 1.15,
+                          height: binWidth * 0.14,
                           decoration: BoxDecoration(
                             color: Colors.grey.shade700,
                             borderRadius: BorderRadius.circular(4),
                           ),
                         ),
                         Container(
-                          width: 140,
-                          height: 160,
+                          width: binWidth,
+                          height: binWidth * 1.14,
                           decoration: BoxDecoration(
                             color: AppTheme.card,
                             borderRadius: const BorderRadius.vertical(
@@ -96,9 +102,9 @@ class _TrashCanSceneState extends State<TrashCanScene> {
                             ),
                             border: Border.all(color: Colors.grey.shade600, width: 2),
                           ),
-                          child: const Icon(
+                          child: Icon(
                             Icons.delete_forever,
-                            size: 48,
+                            size: binWidth * 0.34,
                             color: AppTheme.textSecondary,
                           ),
                         ),
@@ -114,7 +120,7 @@ class _TrashCanSceneState extends State<TrashCanScene> {
                         child: _thrown
                             ? TargetAvatar(
                                 target: widget.target,
-                                size: 90,
+                                size: avatarSize * 0.9,
                                 showLabel: false,
                                 opacity: 1 - _throwProgress * 0.5,
                               )
@@ -123,7 +129,7 @@ class _TrashCanSceneState extends State<TrashCanScene> {
                                   color: Colors.transparent,
                                   child: TargetAvatar(
                                     target: widget.target,
-                                    size: 80,
+                                    size: avatarSize * 0.8,
                                     showLabel: false,
                                   ),
                                 ),
@@ -134,7 +140,7 @@ class _TrashCanSceneState extends State<TrashCanScene> {
                                 },
                                 child: TargetAvatar(
                                   target: widget.target,
-                                  size: 100,
+                                  size: avatarSize,
                                   showLabel: false,
                                 ),
                               ),

@@ -152,7 +152,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           children: [
                             Icon(
                               Icons.auto_awesome,
-                              size: 48,
+                              size: 28,
                               color: AppTheme.gold.withValues(alpha: 0.85),
                             ),
                             const SizedBox(height: 14),
@@ -197,7 +197,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 ),
                                 leading: TargetAvatar(
                                   target: target,
-                                  size: 56,
+                                  size: 40,
                                   showLabel: false,
                                 ),
                                 title: Text(

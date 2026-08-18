@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../models/vent_target.dart';
 import '../../services/vent_sfx.dart';
 import '../../widgets/dramatic_fx.dart';
+import '../../widgets/scene_scale.dart';
 import '../../widgets/target_avatar.dart';
 import '../../widgets/vent_scene_shell.dart';
 
@@ -71,7 +72,9 @@ class _BlackHoleSceneState extends State<BlackHoleScene>
               constraints.maxWidth / 2,
               constraints.maxHeight * 0.48,
             );
-            final hole = 90.0 + _feeds * 22;
+            final scale = SceneScale(constraints);
+            final avatarSize = scale.avatar(0.24);
+            final hole = avatarSize * 0.85 + _feeds * avatarSize * 0.2;
             return GestureDetector(
               onTap: () => _feed(center),
               child: ventFxLayer(
@@ -85,8 +88,8 @@ class _BlackHoleSceneState extends State<BlackHoleScene>
                         alignment: Alignment.center,
                         children: [
                           Container(
-                            width: hole * wobble + 40,
-                            height: hole * wobble + 40,
+                            width: hole * wobble + avatarSize * 0.36,
+                            height: hole * wobble + avatarSize * 0.36,
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
                               boxShadow: [
@@ -119,7 +122,7 @@ class _BlackHoleSceneState extends State<BlackHoleScene>
                               opacity: _gone ? 0 : 1,
                               child: TargetAvatar(
                                 target: widget.target,
-                                size: 110,
+                                size: avatarSize,
                                 showLabel: false,
                               ),
                             ),

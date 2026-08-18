@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../../models/vent_target.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/dramatic_fx.dart';
+import '../../widgets/scene_scale.dart';
 import '../../widgets/target_avatar.dart';
 import '../../widgets/vent_scene_shell.dart';
 
@@ -52,13 +53,18 @@ class _SledgehammerSceneState extends State<SledgehammerScene>
     if (!mounted) return;
     _fx.megaImpact(at: _center, color: AppTheme.accent);
     _fx.comicPop(at: _center, color: AppTheme.accent);
+    if (_smashes >= 3) {
+      _fx.crackerBurst(at: _center, volleys: 2, playSound: false);
+    }
     setState(() {
       _smashes++;
       _swinging = false;
     });
     _swingController.reset();
     if (_smashes >= 5) {
-      await Future.delayed(const Duration(milliseconds: 500));
+      _fx.crackerBurst(at: _center, volleys: 5);
+      _fx.glitterRain(at: _center, count: 50);
+      await Future.delayed(const Duration(milliseconds: 700));
       if (mounted) context.go('/calm/${widget.target.id}');
     }
   }
@@ -77,6 +83,8 @@ class _SledgehammerSceneState extends State<SledgehammerScene>
         child: LayoutBuilder(
           builder: (context, constraints) {
             final area = Size(constraints.maxWidth, constraints.maxHeight);
+            final scale = SceneScale(constraints);
+            final avatarSize = scale.avatar(0.32);
             _center = Offset(area.width / 2, area.height * 0.5);
             return ventFxLayer(
               fx: _fx,
@@ -89,7 +97,7 @@ class _SledgehammerSceneState extends State<SledgehammerScene>
                       scale: 1 - _smashes * 0.12,
                       child: TargetAvatar(
                         target: widget.target,
-                        size: 160,
+                        size: avatarSize,
                         showLabel: false,
                         cracks: _smashes.clamp(0, 6),
                       ),
@@ -97,12 +105,12 @@ class _SledgehammerSceneState extends State<SledgehammerScene>
                     if (_smashes > 0)
                       ...List.generate(_smashes, (i) {
                         return Positioned(
-                          top: 80 + i * 8.0,
-                          left: 60 + (i % 3) * 40.0,
+                          top: avatarSize * 0.5 + i * 8.0,
+                          left: area.width * 0.2 + (i % 3) * (avatarSize * 0.22),
                           child: Icon(
                             Icons.broken_image_outlined,
                             color: AppTheme.accent.withValues(alpha: 0.6),
-                            size: 24,
+                            size: scale.accent(0.055),
                           ),
                         );
                       }),
@@ -111,8 +119,8 @@ class _SledgehammerSceneState extends State<SledgehammerScene>
                       builder: (context, child) {
                         final angle = -pi / 4 + _swingController.value * pi / 2;
                         return Positioned(
-                          top: 40,
-                          right: 40,
+                          top: area.height * 0.12,
+                          right: area.width * 0.12,
                           child: Transform.rotate(
                             angle: angle,
                             alignment: Alignment.bottomCenter,
@@ -120,19 +128,19 @@ class _SledgehammerSceneState extends State<SledgehammerScene>
                           ),
                         );
                       },
-                      child: const Icon(
+                      child: Icon(
                         Icons.hardware,
-                        size: 80,
-                        color: Color(0xFF78909C),
+                        size: scale.prop(0.2),
+                        color: const Color(0xFF78909C),
                       ),
                     ),
                     if (_swinging)
                       Positioned(
-                        bottom: 120,
+                        bottom: avatarSize * 0.75,
                         child: Text(
                           'WHAM!',
                           style: TextStyle(
-                            fontSize: 28,
+                            fontSize: scale.accent(0.07),
                             fontWeight: FontWeight.bold,
                             color: AppTheme.accent.withValues(alpha: 0.8),
                           ),

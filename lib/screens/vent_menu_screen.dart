@@ -64,46 +64,51 @@ class _VentMenuScreenState extends State<VentMenuScreen> {
                 FadeSlideIn(
                   child: GlassPanel(
                     goldEdge: true,
-                    child: Column(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 10,
+                    ),
+                    child: Row(
                       children: [
-                        TargetAvatar(target: target, size: 108),
-                        const SizedBox(height: 10),
-                        Text(
-                          'Pick a scene. Make it theatrical.',
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                color: AppTheme.goldSoft,
-                              ),
+                        TargetAvatar(
+                          target: target,
+                          size: 44,
+                          showLabel: false,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            'Pick a scene. Make it theatrical.',
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodyMedium
+                                ?.copyWith(color: AppTheme.goldSoft),
+                          ),
                         ),
                       ],
                     ),
                   ),
                 ),
-                const SizedBox(height: 20),
-                GridView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2,
-                    mainAxisSpacing: 12,
-                    crossAxisSpacing: 12,
-                    childAspectRatio: 0.92,
-                  ),
-                  itemCount: VentAction.all.length,
-                  itemBuilder: (context, index) {
-                    final action = VentAction.all[index];
-                    return VentActionCard(
-                      action: action,
-                      index: index,
-                      onTap: () {
-                        VentSfx.light();
-                        VentSfx.instance.unlock();
-                        VentSfx.instance.play(Sfx.whoosh);
-                        context.push(
-                          '/vent/${action.type.name}/${target.id}',
-                        );
-                      },
-                    );
-                  },
+                const SizedBox(height: 16),
+                Wrap(
+                  alignment: WrapAlignment.center,
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    for (var i = 0; i < VentAction.all.length; i++)
+                      VentActionCard(
+                        action: VentAction.all[i],
+                        index: i,
+                        onTap: () {
+                          VentSfx.light();
+                          VentSfx.instance.unlock();
+                          VentSfx.instance.play(Sfx.whoosh);
+                          context.push(
+                            '/vent/${VentAction.all[i].type.name}/${target.id}',
+                          );
+                        },
+                      ),
+                  ],
                 ),
               ],
             ),

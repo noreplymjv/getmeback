@@ -65,7 +65,7 @@ class VentSceneShell extends StatelessWidget {
                   padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
                   child: TargetAvatar(
                     target: target,
-                    size: 76,
+                    size: 52,
                     showLabel: false,
                   ),
                 ),

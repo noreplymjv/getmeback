@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../../models/vent_target.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/dramatic_fx.dart';
+import '../../widgets/scene_scale.dart';
 import '../../widgets/target_avatar.dart';
 import '../../widgets/vent_scene_shell.dart';
 
@@ -91,32 +92,35 @@ class _BlenderSceneState extends State<BlenderScene>
         child: LayoutBuilder(
           builder: (context, constraints) {
             final area = Size(constraints.maxWidth, constraints.maxHeight);
+            final scale = SceneScale(constraints);
+            final jarWidth = scale.container(0.4);
+            final avatarSize = scale.avatar(0.24);
             return ventFxLayer(
               fx: _fx,
               child: Stack(
                 alignment: Alignment.center,
                 children: [
                   Positioned(
-                    bottom: 60,
+                    bottom: area.height * 0.12,
                     child: GestureDetector(
                       onTap: () => _startBlend(area),
-                      child: _buildBlender(),
+                      child: _buildBlender(jarWidth),
                     ),
                   ),
                   if (!_blending)
                     Positioned(
-                      top: 80,
+                      top: area.height * 0.1,
                       child: Draggable(
                         feedback: TargetAvatar(
                           target: widget.target,
-                          size: 90,
+                          size: avatarSize * 0.85,
                           showLabel: false,
                         ),
                         childWhenDragging: Opacity(
                           opacity: 0.25,
                           child: TargetAvatar(
                             target: widget.target,
-                            size: 90,
+                            size: avatarSize * 0.85,
                             showLabel: false,
                           ),
                         ),
@@ -129,14 +133,14 @@ class _BlenderSceneState extends State<BlenderScene>
                         },
                         child: TargetAvatar(
                           target: widget.target,
-                          size: 110,
+                          size: avatarSize,
                           showLabel: false,
                         ),
                       ),
                     ),
                   if (_blending)
                     Positioned(
-                      bottom: 150,
+                      bottom: area.height * 0.12 + jarWidth * 0.55,
                       child: AnimatedBuilder(
                         animation: _spinController,
                         builder: (context, child) {
@@ -154,14 +158,14 @@ class _BlenderSceneState extends State<BlenderScene>
                         },
                         child: TargetAvatar(
                           target: widget.target,
-                          size: 90,
+                          size: avatarSize * 0.8,
                           showLabel: false,
                         ),
                       ),
                     ),
                   if (_blending)
                     Positioned(
-                      bottom: 40,
+                      bottom: area.height * 0.04,
                       child: Text(
                         'JUICE LEVEL ${(100 * _blendProgress).round()}%',
                         style: TextStyle(
@@ -187,14 +191,14 @@ class _BlenderSceneState extends State<BlenderScene>
     );
   }
 
-  Widget _buildBlender() {
+  Widget _buildBlender(double jarWidth) {
     final glow = _blending ? AppTheme.accent : AppTheme.accentSecondary;
     return Column(
       children: [
         AnimatedContainer(
           duration: const Duration(milliseconds: 200),
-          width: 160,
-          height: 180,
+          width: jarWidth,
+          height: jarWidth * 1.12,
           decoration: BoxDecoration(
             color: AppTheme.surface,
             borderRadius: BorderRadius.circular(24),
@@ -215,7 +219,7 @@ class _BlenderSceneState extends State<BlenderScene>
                   animation: _spinController,
                   builder: (context, _) {
                     return CustomPaint(
-                      size: const Size(120, 120),
+                      size: Size(jarWidth * 0.75, jarWidth * 0.75),
                       painter: _SwirlPainter(
                         _spinController.value,
                         _blendProgress,
@@ -225,15 +229,15 @@ class _BlenderSceneState extends State<BlenderScene>
                 ),
               Icon(
                 Icons.blender,
-                size: 56,
+                size: jarWidth * 0.35,
                 color: glow,
               ),
             ],
           ),
         ),
         Container(
-          width: 110,
-          height: 44,
+          width: jarWidth * 0.68,
+          height: jarWidth * 0.28,
           decoration: BoxDecoration(
             color: AppTheme.card,
             borderRadius: BorderRadius.circular(10),
