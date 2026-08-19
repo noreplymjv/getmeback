@@ -7,6 +7,7 @@ import '../services/storage_service.dart';
 import '../services/vent_sfx.dart';
 import '../theme/app_theme.dart';
 import '../widgets/premium_chrome.dart';
+import '../widgets/responsive_columns.dart';
 import '../widgets/target_avatar.dart';
 import '../widgets/vent_action_card.dart';
 
@@ -59,58 +60,78 @@ class _VentMenuScreenState extends State<VentMenuScreen> {
         child: SafeArea(
           child: SingleChildScrollView(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
-            child: Column(
-              children: [
-                FadeSlideIn(
-                  child: GlassPanel(
-                    goldEdge: true,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 10,
-                    ),
-                    child: Row(
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 1280),
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final columns = responsiveTileColumns(constraints.maxWidth);
+
+                    return Column(
                       children: [
-                        TargetAvatar(
-                          target: target,
-                          size: 44,
-                          showLabel: false,
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            'Pick a scene. Make it theatrical.',
-                            style: Theme.of(context)
-                                .textTheme
-                                .bodyMedium
-                                ?.copyWith(color: AppTheme.goldSoft),
+                        FadeSlideIn(
+                          child: ConstrainedBox(
+                            constraints: const BoxConstraints(maxWidth: 320),
+                            child: GlassPanel(
+                              goldEdge: true,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 14,
+                                vertical: 10,
+                              ),
+                              child: Row(
+                                children: [
+                                  TargetAvatar(
+                                    target: target,
+                                    size: 40,
+                                    showLabel: false,
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: Text(
+                                      'Pick a scene. Make it theatrical.',
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodySmall
+                                          ?.copyWith(color: AppTheme.goldSoft),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
                           ),
                         ),
+                        const SizedBox(height: 12),
+                        GridView.builder(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                            maxCrossAxisExtent: 140,
+                            mainAxisSpacing: 8,
+                            crossAxisSpacing: 8,
+                            mainAxisExtent: 110,
+                          ),
+                          itemCount: VentAction.all.length,
+                          itemBuilder: (context, index) {
+                            final action = VentAction.all[index];
+                            return VentActionCard(
+                              action: action,
+                              index: index,
+                              onTap: () {
+                                VentSfx.light();
+                                VentSfx.instance.unlock();
+                                VentSfx.instance.play(Sfx.whoosh);
+                                context.push(
+                                  '/vent/${action.type.name}/${target.id}',
+                                );
+                              },
+                            );
+                          },
+                        ),
                       ],
-                    ),
-                  ),
+                    );
+                  },
                 ),
-                const SizedBox(height: 16),
-                Wrap(
-                  alignment: WrapAlignment.center,
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    for (var i = 0; i < VentAction.all.length; i++)
-                      VentActionCard(
-                        action: VentAction.all[i],
-                        index: i,
-                        onTap: () {
-                          VentSfx.light();
-                          VentSfx.instance.unlock();
-                          VentSfx.instance.play(Sfx.whoosh);
-                          context.push(
-                            '/vent/${VentAction.all[i].type.name}/${target.id}',
-                          );
-                        },
-                      ),
-                  ],
-                ),
-              ],
+              ),
             ),
           ),
         ),

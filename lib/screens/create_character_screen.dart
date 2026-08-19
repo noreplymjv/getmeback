@@ -13,6 +13,7 @@ import '../theme/app_theme.dart';
 import '../utils/io_io.dart' if (dart.library.html) '../utils/io_stub.dart' as io;
 import '../utils/target_image.dart';
 import '../widgets/premium_chrome.dart';
+import '../widgets/responsive_columns.dart';
 
 class CreateCharacterScreen extends StatefulWidget {
   const CreateCharacterScreen({super.key});
@@ -129,6 +130,12 @@ class _CreateCharacterScreenState extends State<CreateCharacterScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final gridWidth = MediaQuery.sizeOf(context).width - 48;
+    final presetCols = responsivePresetColumns(
+      gridWidth,
+      PresetCharacter.all.length,
+    );
+
     return Scaffold(
       extendBodyBehindAppBar: true,
       appBar: AppBar(
@@ -157,76 +164,97 @@ class _CreateCharacterScreenState extends State<CreateCharacterScreen> {
                   ),
             ),
             const SizedBox(height: 12),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                for (final preset in PresetCharacter.all)
-                  GestureDetector(
-                    onTap: () => setState(() {
-                      _selectedPresetId = preset.id;
-                      _imagePath = null;
-                      _imageBytes = null;
-                    }),
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 220),
-                      width: 72,
-                      height: 88,
-                      decoration: BoxDecoration(
-                        color: preset.color.withValues(alpha: 0.22),
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(
-                          color: _selectedPresetId == preset.id
-                              ? AppTheme.gold
-                              : Colors.white.withValues(alpha: 0.08),
-                          width: _selectedPresetId == preset.id ? 2 : 1,
+            GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: presetCols,
+                mainAxisSpacing: 8,
+                crossAxisSpacing: 8,
+                childAspectRatio: 0.82,
+              ),
+              itemCount: PresetCharacter.all.length,
+              itemBuilder: (context, index) {
+                final preset = PresetCharacter.all[index];
+                final selected = _selectedPresetId == preset.id;
+                return GestureDetector(
+                  onTap: () => setState(() {
+                    _selectedPresetId = preset.id;
+                    _imagePath = null;
+                    _imageBytes = null;
+                  }),
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      final side = constraints.maxWidth;
+                      final imageSide = (side * 0.72).clamp(40.0, 72.0);
+                      final emojiSize = imageSide * 0.45;
+                      return AnimatedContainer(
+                        duration: const Duration(milliseconds: 220),
+                        decoration: BoxDecoration(
+                          color: preset.color.withValues(alpha: 0.22),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: selected
+                                ? AppTheme.gold
+                                : Colors.white.withValues(alpha: 0.08),
+                            width: selected ? 2 : 1,
+                          ),
                         ),
-                      ),
-                      clipBehavior: Clip.antiAlias,
-                      child: Column(
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.fromLTRB(6, 6, 6, 2),
-                            child: SizedBox(
-                              width: 48,
-                              height: 48,
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(8),
-                                child: preset.assetPath != null
-                                    ? Image.asset(
-                                        preset.assetPath!,
-                                        fit: BoxFit.contain,
-                                        errorBuilder: (_, __, ___) => Center(
+                        clipBehavior: Clip.antiAlias,
+                        child: Column(
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(6, 6, 6, 2),
+                              child: SizedBox(
+                                width: imageSide,
+                                height: imageSide,
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(8),
+                                  child: preset.assetPath != null
+                                      ? Image.asset(
+                                          preset.assetPath!,
+                                          fit: BoxFit.contain,
+                                          errorBuilder: (_, __, ___) => Center(
+                                            child: Text(
+                                              preset.emoji,
+                                              style: TextStyle(
+                                                fontSize: emojiSize,
+                                              ),
+                                            ),
+                                          ),
+                                        )
+                                      : Center(
                                           child: Text(
                                             preset.emoji,
-                                            style: const TextStyle(fontSize: 22),
+                                            style: TextStyle(
+                                              fontSize: emojiSize,
+                                            ),
                                           ),
                                         ),
-                                      )
-                                    : Center(
-                                        child: Text(
-                                          preset.emoji,
-                                          style: const TextStyle(fontSize: 22),
-                                        ),
-                                      ),
+                                ),
                               ),
                             ),
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 4),
-                            child: Text(
-                              preset.name,
-                              style: const TextStyle(fontSize: 9, height: 1.1),
-                              textAlign: TextAlign.center,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 4),
+                              child: Text(
+                                preset.name,
+                                style: TextStyle(
+                                  fontSize: (side * 0.12).clamp(9.0, 11.0),
+                                  height: 1.1,
+                                ),
+                                textAlign: TextAlign.center,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
                             ),
-                          ),
-                        ],
-                      ),
-                    ),
+                            const SizedBox(height: 4),
+                          ],
+                        ),
+                      );
+                    },
                   ),
-              ],
+                );
+              },
             ),
             const SizedBox(height: 32),
             Text(
