@@ -37,7 +37,7 @@ class DramaticFxOverlay extends StatelessWidget {
       child: Stack(
         fit: StackFit.expand,
         children: [
-          if (child != null) child!,
+          ...(child == null ? const <Widget>[] : <Widget>[child!]),
           IgnorePointer(
             child: CustomPaint(
               painter: _FxPainter(

@@ -214,7 +214,7 @@ class _CreateCharacterScreenState extends State<CreateCharacterScreen> {
                                       ? Image.asset(
                                           preset.assetPath!,
                                           fit: BoxFit.contain,
-                                          errorBuilder: (_, __, ___) => Center(
+                                          errorBuilder: (_, _, _) => Center(
                                             child: Text(
                                               preset.emoji,
                                               style: TextStyle(

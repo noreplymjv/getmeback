@@ -50,7 +50,7 @@ class TargetImage {
       return Image.asset(
         preset!.assetPath!,
         fit: fit,
-        errorBuilder: (_, __, ___) => _fallback(preset, emojiSize),
+        errorBuilder: (_, _, _) => _fallback(preset, emojiSize),
       );
     }
 
