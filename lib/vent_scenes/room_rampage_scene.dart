@@ -3,13 +3,16 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-import '../models/room_hotspots.dart';
+import '../models/prop_state.dart';
 import '../models/room_setup.dart';
 import '../models/vent_target.dart';
 import '../services/vent_sfx.dart';
 import '../theme/app_theme.dart';
 import '../widgets/base_vent_scene.dart';
 import '../widgets/dramatic_fx.dart';
+import '../widgets/interactive_room_prop.dart';
+import '../widgets/prop_destruction_scars.dart';
+import '../widgets/prop_shatter_fx.dart';
 import '../widgets/vent_scene_shell.dart';
 
 class RoomRampageScene extends StatefulWidget {
@@ -32,6 +35,8 @@ class _RoomRampageSceneState extends BaseVentSceneState<RoomRampageScene> {
   String? _banner;
   bool _showCoach = true;
   late final AnimationController _pulse;
+  late final PropShatterController _shatter;
+  final List<DestructionScar> _scars = [];
   final _rng = Random();
 
   int get _total => widget.room.props.length;
@@ -49,15 +54,24 @@ class _RoomRampageSceneState extends BaseVentSceneState<RoomRampageScene> {
   @override
   void initState() {
     super.initState();
+    _shatter = PropShatterController()..addListener(_onShatterTick);
     _pulse = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1100),
     )..repeat(reverse: true);
-    _setBanner('Tap the glowing objects to smash them');
+    _setBanner(
+      'Tap the objects in the room to smash them',
+    );
+  }
+
+  void _onShatterTick() {
+    if (mounted) setState(() {});
   }
 
   @override
   void dispose() {
+    _shatter.removeListener(_onShatterTick);
+    _shatter.dispose();
     _pulse.dispose();
     super.dispose();
   }
@@ -74,7 +88,40 @@ class _RoomRampageSceneState extends BaseVentSceneState<RoomRampageScene> {
     });
   }
 
-  void _playStyle(PropSmashStyle style) {
+  void _playMaterial(PropMaterial material, PropSmashStyle style) {
+    switch (material) {
+      case PropMaterial.glass:
+        VentSfx.instance.play(Sfx.crack);
+        VentSfx.light();
+      case PropMaterial.ceramic:
+        VentSfx.instance.play(Sfx.smash);
+        VentSfx.heavy();
+      case PropMaterial.wood:
+        VentSfx.instance.play(Sfx.hit);
+        VentSfx.medium();
+      case PropMaterial.metal:
+        VentSfx.instance.play(Sfx.zap);
+        VentSfx.medium();
+      case PropMaterial.plastic:
+        VentSfx.instance.play(Sfx.pop);
+        VentSfx.light();
+      case PropMaterial.fabric:
+        VentSfx.instance.play(Sfx.whoosh);
+        VentSfx.light();
+    }
+    if (style == PropSmashStyle.spill || style == PropSmashStyle.splash) {
+      VentSfx.instance.play(Sfx.splash);
+    } else if (style == PropSmashStyle.explode) {
+      VentSfx.instance.play(Sfx.boom);
+      VentSfx.heavy();
+    }
+  }
+
+  void _playStyle(PropSmashStyle style, {PropMaterial? material}) {
+    if (material != null) {
+      _playMaterial(material, style);
+      return;
+    }
     switch (style) {
       case PropSmashStyle.shatter:
       case PropSmashStyle.crack:
@@ -98,7 +145,15 @@ class _RoomRampageSceneState extends BaseVentSceneState<RoomRampageScene> {
     }
   }
 
-  void _burst(Offset at, PropSmashStyle style, Color color) {
+  void _burst(Offset at, PropSmashStyle style, Color color, {RoomProp? prop}) {
+    if (prop != null) {
+      _shatter.burst(
+        at: at,
+        color: prop.color,
+        style: prop.effectiveMaterial.shatterStyle,
+        count: prop.effectiveMaterial.shardCount,
+      );
+    }
     switch (style) {
       case PropSmashStyle.shatter:
       case PropSmashStyle.crack:
@@ -122,7 +177,19 @@ class _RoomRampageSceneState extends BaseVentSceneState<RoomRampageScene> {
     }
   }
 
-  void _onPropTap(RoomProp prop, Offset center) {
+  void _leaveScar(RoomProp prop, Offset center, PropSmashStyle style, Size stage) {
+    _scars.add(
+      DestructionScar.fromProp(
+        prop: prop,
+        roomId: widget.room.id,
+        stage: stage,
+        center: center,
+        style: style,
+      ),
+    );
+  }
+
+  void _onPropTap(RoomProp prop, Offset center, Size stage) {
     if (_smashed.contains(prop.id)) return;
     _dismissCoach();
 
@@ -146,8 +213,10 @@ class _RoomRampageSceneState extends BaseVentSceneState<RoomRampageScene> {
       final msg = reaction?.message ??
           '${holding.label} → ${prop.label}!';
       _setBanner(msg);
-      _playStyle(style);
-      _burst(center, style, prop.color);
+      _leaveScar(holding, center, style, stage);
+      _leaveScar(prop, center, style, stage);
+      _playStyle(style, material: prop.effectiveMaterial);
+      _burst(center, style, prop.color, prop: prop);
       _maybeFinish(center);
       return;
     }
@@ -172,8 +241,9 @@ class _RoomRampageSceneState extends BaseVentSceneState<RoomRampageScene> {
       '${prop.label} is gone!',
     ];
     _setBanner(quirks[_rng.nextInt(quirks.length)]);
-    _playStyle(prop.style);
-    _burst(center, prop.style, prop.color);
+    _leaveScar(prop, center, prop.style, stage);
+    _playStyle(prop.style, material: prop.effectiveMaterial);
+    _burst(center, prop.style, prop.color, prop: prop);
     _maybeFinish(center);
   }
 
@@ -202,37 +272,45 @@ class _RoomRampageSceneState extends BaseVentSceneState<RoomRampageScene> {
 
     return DramaticFxTicker(
       controller: fx,
-      child: VentSceneShell(
-        target: widget.target,
-        title: room.name,
-        hint: _cleared
-            ? 'Room wrecked. Nice.'
-            : holding != null
-                ? 'THROW: tap any other glowing object'
-                : 'SMASH: tap glowing objects · glass/cups pick up first',
-        showTarget: false,
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final size = Size(constraints.maxWidth, constraints.maxHeight);
-            return Stack(
-              fit: StackFit.expand,
-              children: [
-                // Full-bleed room art
-                Positioned.fill(
-                  child: Image.asset(
-                    room.resolvedAsset,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, _, _) => DecoratedBox(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: room.gradient,
+      child: PropShatterTicker(
+        controller: _shatter,
+        child: VentSceneShell(
+          target: widget.target,
+          title: room.name,
+          hint: _cleared
+              ? 'Room wrecked. Nice.'
+              : holding != null
+                  ? 'THROW: tap another object in the room'
+                  : 'SMASH: tap objects directly · glass/cups pick up first',
+          showTarget: false,
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final size = Size(constraints.maxWidth, constraints.maxHeight);
+              final props = List<RoomProp>.from(room.props)
+                ..sort((a, b) => a.effectiveZIndex.compareTo(b.effectiveZIndex));
+              return Stack(
+                fit: StackFit.expand,
+                children: [
+                  // Full-bleed room art (clean base when sprite mode)
+                  Positioned.fill(
+                    child: Image.asset(
+                      room.resolvedBaseAsset,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, _, _) => DecoratedBox(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: room.gradient,
+                          ),
                         ),
                       ),
                     ),
                   ),
-                ),
+                  // Persistent wreckage marks where props were smashed
+                  Positioned.fill(
+                    child: DestructionScarsLayer(scars: _scars),
+                  ),
                 // Soft vignette so props pop
                 Positioned.fill(
                   child: DecoratedBox(
@@ -258,7 +336,9 @@ class _RoomRampageSceneState extends BaseVentSceneState<RoomRampageScene> {
                 ),
                     ventFxLayer(
                   fx: fx,
-                  child: Stack(
+                  child: propShatterLayer(
+                    shatter: _shatter,
+                    child: Stack(
                     fit: StackFit.expand,
                     children: [
                       if (holding != null)
@@ -280,18 +360,19 @@ class _RoomRampageSceneState extends BaseVentSceneState<RoomRampageScene> {
                           holding: holding,
                         ),
                       ),
-                      for (final prop in room.props)
-                        _SmashableProp(
+                      for (final prop in props)
+                        InteractiveRoomProp(
                           roomId: room.id,
                           prop: prop,
+                          stage: size,
+                          pulse: _pulse,
                           smashed: _smashed.contains(prop.id),
                           holding: _holdingId == prop.id,
                           throwTarget: holding != null &&
                               holding.id != prop.id &&
                               !_smashed.contains(prop.id),
-                          pulse: _pulse,
-                          stage: size,
-                          onTap: (center) => _onPropTap(prop, center),
+                          spriteMode: true,
+                          onTap: (center) => _onPropTap(prop, center, size),
                         ),
                       if (_banner != null)
                         Positioned(
@@ -322,10 +403,12 @@ class _RoomRampageSceneState extends BaseVentSceneState<RoomRampageScene> {
                         ),
                     ],
                   ),
+                  ),
                 ),
               ],
             );
           },
+        ),
         ),
       ),
     );
@@ -528,7 +611,10 @@ class _CoachOverlay extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 12),
-                      _tip(Icons.flash_on, 'Tap the pulsing pins on furniture — not empty wall'),
+                      _tip(
+                        Icons.flash_on,
+                        'Tap the real objects — plates, glasses, chairs',
+                      ),
                       _tip(Icons.back_hand, 'Glass / cups: first tap = pick up'),
                       _tip(Icons.sports_handball,
                           'Then TAP another object to throw & react'),
@@ -569,172 +655,6 @@ class _CoachOverlay extends StatelessWidget {
               ),
             ),
           ),
-        ],
-      ),
-    );
-  }
-}
-
-class _SmashableProp extends StatelessWidget {
-  const _SmashableProp({
-    required this.roomId,
-    required this.prop,
-    required this.smashed,
-    required this.holding,
-    required this.throwTarget,
-    required this.pulse,
-    required this.stage,
-    required this.onTap,
-  });
-
-  final String roomId;
-  final RoomProp prop;
-  final bool smashed;
-  final bool holding;
-  final bool throwTarget;
-  final Animation<double> pulse;
-  final Size stage;
-  final ValueChanged<Offset> onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    const hit = 72.0;
-    final norm = RoomHotspots.forProp(
-      roomId: roomId,
-      propId: prop.id,
-      fallback: prop.align,
-    );
-    final dx = norm.dx * stage.width;
-    final dy = norm.dy * stage.height;
-    final center = Offset(dx, dy);
-
-    final accent = holding
-        ? AppTheme.gold
-        : throwTarget
-            ? const Color(0xFFFFEB3B)
-            : Colors.white;
-
-    return Positioned(
-      left: dx - hit / 2,
-      top: dy - hit / 2,
-      width: hit,
-      height: hit + 20,
-      child: GestureDetector(
-        behavior: HitTestBehavior.translucent,
-        onTap: smashed ? null : () => onTap(center),
-        child: AnimatedBuilder(
-          animation: pulse,
-          builder: (context, _) {
-            if (smashed) {
-              return Opacity(
-                opacity: 0.2,
-                child: _pin(accent, ringScale: 0.7, showLabel: false),
-              );
-            }
-
-            final ringScale = 1 + pulse.value * 0.22;
-            return Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Transform.scale(
-                  scale: holding ? 1.1 : 1,
-                  child: _pin(
-                    accent,
-                    ringScale: ringScale,
-                    action: holding
-                        ? 'HOLD'
-                        : throwTarget
-                            ? 'THROW'
-                            : prop.throwable
-                                ? 'PICK'
-                                : null,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  prop.label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 9,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.white.withValues(alpha: 0.92),
-                    shadows: [
-                      Shadow(
-                        color: Colors.black.withValues(alpha: 0.95),
-                        blurRadius: 6,
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            );
-          },
-        ),
-      ),
-    );
-  }
-
-  Widget _pin(
-    Color accent, {
-    required double ringScale,
-    String? action,
-    bool showLabel = true,
-  }) {
-    const core = 12.0;
-    const ring = 36.0;
-    return SizedBox(
-      width: ring * ringScale * 1.4,
-      height: ring * ringScale * 1.4,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          Container(
-            width: ring * ringScale,
-            height: ring * ringScale,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: accent.withValues(alpha: 0.55),
-                width: 2,
-              ),
-            ),
-          ),
-          Container(
-            width: core,
-            height: core,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: accent.withValues(alpha: 0.95),
-              boxShadow: [
-                BoxShadow(
-                  color: accent.withValues(alpha: 0.5),
-                  blurRadius: 8,
-                ),
-              ],
-            ),
-          ),
-          if (action != null && showLabel)
-            Positioned(
-              bottom: 0,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-                decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.65),
-                  borderRadius: BorderRadius.circular(6),
-                  border: Border.all(color: accent.withValues(alpha: 0.6)),
-                ),
-                child: Text(
-                  action,
-                  style: TextStyle(
-                    fontSize: 7,
-                    fontWeight: FontWeight.w900,
-                    color: accent,
-                    letterSpacing: 0.4,
-                  ),
-                ),
-              ),
-            ),
         ],
       ),
     );

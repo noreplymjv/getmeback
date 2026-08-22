@@ -85,7 +85,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     child: Text(
                       'Two clear paths:\n'
                       '• Characters = faces (preset or upload) → pick a vent action\n'
-                      '• Rooms = pictured rooms → tap glowing objects to smash',
+                      '• Rooms = pictured rooms → tap objects directly to smash',
                       style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                             color: AppTheme.textSecondary,
                             height: 1.45,
@@ -114,7 +114,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     child: _ModeCard(
                       title: 'Rooms & Scenes',
                       subtitle:
-                          'Real room pictures — tap glowing hotspots on furniture.',
+                          'Real room pictures — tap plates, glasses, furniture to smash.',
                       icon: Icons.meeting_room,
                       previewAsset: RoomSetup.all.first.resolvedAsset,
                       colors: const [Color(0xFF26A69A), Color(0xFF1565C0)],

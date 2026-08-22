@@ -1,0 +1,262 @@
+[
+  {
+    "room": "kitchen",
+    "base": "assets/rooms/kitchen_base.png",
+    "props": [
+      "assets/rooms/props/kitchen_table.png",
+      "assets/rooms/props/kitchen_chair.png",
+      "assets/rooms/props/kitchen_blender.png",
+      "assets/rooms/props/kitchen_glass.png",
+      "assets/rooms/props/kitchen_mug.png",
+      "assets/rooms/props/kitchen_plate.png"
+    ],
+    "count": 6
+  },
+  {
+    "room": "bathroom",
+    "base": "assets/rooms/bathroom_base.png",
+    "props": [
+      "assets/rooms/props/bathroom_mirror.png",
+      "assets/rooms/props/bathroom_toilet.png",
+      "assets/rooms/props/bathroom_towel.png",
+      "assets/rooms/props/bathroom_bottle.png",
+      "assets/rooms/props/bathroom_glass.png",
+      "assets/rooms/props/bathroom_soap.png"
+    ],
+    "count": 6
+  },
+  {
+    "room": "office",
+    "base": "assets/rooms/office_base.png",
+    "props": [
+      "assets/rooms/props/office_chair.png",
+      "assets/rooms/props/office_monitor.png",
+      "assets/rooms/props/office_plant.png",
+      "assets/rooms/props/office_lamp.png",
+      "assets/rooms/props/office_mug.png",
+      "assets/rooms/props/office_keyboard.png"
+    ],
+    "count": 6
+  },
+  {
+    "room": "cabin",
+    "base": "assets/rooms/cabin_base.png",
+    "props": [
+      "assets/rooms/props/cabin_table.png",
+      "assets/rooms/props/cabin_window.png",
+      "assets/rooms/props/cabin_chair.png",
+      "assets/rooms/props/cabin_logs.png",
+      "assets/rooms/props/cabin_lantern.png",
+      "assets/rooms/props/cabin_mug.png"
+    ],
+    "count": 6
+  },
+  {
+    "room": "living",
+    "base": "assets/rooms/living_base.png",
+    "props": [
+      "assets/rooms/props/living_sofa.png",
+      "assets/rooms/props/living_tv.png",
+      "assets/rooms/props/living_vase.png",
+      "assets/rooms/props/living_lamp.png",
+      "assets/rooms/props/living_glass.png",
+      "assets/rooms/props/living_remote.png"
+    ],
+    "count": 6
+  },
+  {
+    "room": "bedroom",
+    "base": "assets/rooms/bedroom_base.png",
+    "props": [
+      "assets/rooms/props/bedroom_mirror.png",
+      "assets/rooms/props/bedroom_lamp.png",
+      "assets/rooms/props/bedroom_pillow.png",
+      "assets/rooms/props/bedroom_glass.png",
+      "assets/rooms/props/bedroom_frame.png",
+      "assets/rooms/props/bedroom_clock.png"
+    ],
+    "count": 6
+  },
+  {
+    "room": "garage",
+    "base": "assets/rooms/garage_base.png",
+    "props": [
+      "assets/rooms/props/garage_chair.png",
+      "assets/rooms/props/garage_shelf.png",
+      "assets/rooms/props/garage_bucket.png",
+      "assets/rooms/props/garage_toolbox.png",
+      "assets/rooms/props/garage_can.png",
+      "assets/rooms/props/garage_bulb.png"
+    ],
+    "count": 6
+  },
+  {
+    "room": "dining",
+    "base": "assets/rooms/dining_base.png",
+    "props": [
+      "assets/rooms/props/dining_table.png",
+      "assets/rooms/props/dining_chandelier.png",
+      "assets/rooms/props/dining_chair.png",
+      "assets/rooms/props/dining_vase.png",
+      "assets/rooms/props/dining_glass.png",
+      "assets/rooms/props/dining_plate.png"
+    ],
+    "count": 6
+  },
+  {
+    "room": "hotel",
+    "base": "assets/rooms/hotel_base.png",
+    "props": [
+      "assets/rooms/props/hotel_tv.png",
+      "assets/rooms/props/hotel_minibar.png",
+      "assets/rooms/props/hotel_lamp.png",
+      "assets/rooms/props/hotel_glass.png",
+      "assets/rooms/props/hotel_phone.png",
+      "assets/rooms/props/hotel_tray.png"
+    ],
+    "count": 6
+  },
+  {
+    "room": "classroom",
+    "base": "assets/rooms/classroom_base.png",
+    "props": [
+      "assets/rooms/props/classroom_board.png",
+      "assets/rooms/props/classroom_desk.png",
+      "assets/rooms/props/classroom_chair.png",
+      "assets/rooms/props/classroom_globe.png",
+      "assets/rooms/props/classroom_books.png",
+      "assets/rooms/props/classroom_apple.png"
+    ],
+    "count": 6
+  },
+  {
+    "room": "locker",
+    "base": "assets/rooms/locker_base.png",
+    "props": [
+      "assets/rooms/props/locker_locker.png",
+      "assets/rooms/props/locker_mirror.png",
+      "assets/rooms/props/locker_bench.png",
+      "assets/rooms/props/locker_towel.png",
+      "assets/rooms/props/locker_scale.png",
+      "assets/rooms/props/locker_bottle.png"
+    ],
+    "count": 6
+  },
+  {
+    "room": "cafe",
+    "base": "assets/rooms/cafe_base.png",
+    "props": [
+      "assets/rooms/props/cafe_table.png",
+      "assets/rooms/props/cafe_chair.png",
+      "assets/rooms/props/cafe_sign.png",
+      "assets/rooms/props/cafe_glass.png",
+      "assets/rooms/props/cafe_cup.png",
+      "assets/rooms/props/cafe_pastry.png"
+    ],
+    "count": 6
+  },
+  {
+    "room": "studio",
+    "base": "assets/rooms/studio_base.png",
+    "props": [
+      "assets/rooms/props/studio_bed.png",
+      "assets/rooms/props/studio_fridge.png",
+      "assets/rooms/props/studio_plant.png",
+      "assets/rooms/props/studio_lamp.png",
+      "assets/rooms/props/studio_glass.png",
+      "assets/rooms/props/studio_speaker.png"
+    ],
+    "count": 6
+  },
+  {
+    "room": "gameroom",
+    "base": "assets/rooms/gameroom_base.png",
+    "props": [
+      "assets/rooms/props/gameroom_tv.png",
+      "assets/rooms/props/gameroom_chair.png",
+      "assets/rooms/props/gameroom_console.png",
+      "assets/rooms/props/gameroom_can.png",
+      "assets/rooms/props/gameroom_snack.png",
+      "assets/rooms/props/gameroom_controller.png"
+    ],
+    "count": 6
+  },
+  {
+    "room": "laundry",
+    "base": "assets/rooms/laundry_base.png",
+    "props": [
+      "assets/rooms/props/laundry_dryer.png",
+      "assets/rooms/props/laundry_washer.png",
+      "assets/rooms/props/laundry_basket.png",
+      "assets/rooms/props/laundry_shelf.png",
+      "assets/rooms/props/laundry_iron.png",
+      "assets/rooms/props/laundry_detergent.png"
+    ],
+    "count": 6
+  },
+  {
+    "room": "balcony",
+    "base": "assets/rooms/balcony_base.png",
+    "props": [
+      "assets/rooms/props/balcony_table.png",
+      "assets/rooms/props/balcony_chair.png",
+      "assets/rooms/props/balcony_rail.png",
+      "assets/rooms/props/balcony_plant.png",
+      "assets/rooms/props/balcony_lantern.png",
+      "assets/rooms/props/balcony_glass.png"
+    ],
+    "count": 6
+  },
+  {
+    "room": "workshop",
+    "base": "assets/rooms/workshop_base.png",
+    "props": [
+      "assets/rooms/props/workshop_bench.png",
+      "assets/rooms/props/workshop_shelf.png",
+      "assets/rooms/props/workshop_saw.png",
+      "assets/rooms/props/workshop_can.png",
+      "assets/rooms/props/workshop_jar.png",
+      "assets/rooms/props/workshop_radio.png"
+    ],
+    "count": 6
+  },
+  {
+    "room": "penthouse",
+    "base": "assets/rooms/penthouse_base.png",
+    "props": [
+      "assets/rooms/props/penthouse_window.png",
+      "assets/rooms/props/penthouse_sofa.png",
+      "assets/rooms/props/penthouse_sculpture.png",
+      "assets/rooms/props/penthouse_vase.png",
+      "assets/rooms/props/penthouse_lamp.png",
+      "assets/rooms/props/penthouse_glass.png"
+    ],
+    "count": 6
+  },
+  {
+    "room": "dorm",
+    "base": "assets/rooms/dorm_base.png",
+    "props": [
+      "assets/rooms/props/dorm_fridge.png",
+      "assets/rooms/props/dorm_chair.png",
+      "assets/rooms/props/dorm_poster.png",
+      "assets/rooms/props/dorm_laptop.png",
+      "assets/rooms/props/dorm_lamp.png",
+      "assets/rooms/props/dorm_ramen.png"
+    ],
+    "count": 6
+  },
+  {
+    "room": "server",
+    "base": "assets/rooms/server_base.png",
+    "props": [
+      "assets/rooms/props/server_rack.png",
+      "assets/rooms/props/server_monitor.png",
+      "assets/rooms/props/server_fan.png",
+      "assets/rooms/props/server_cable.png",
+      "assets/rooms/props/server_keyboard.png",
+      "assets/rooms/props/server_coffee.png"
+    ],
+    "count": 6
+  }
+]

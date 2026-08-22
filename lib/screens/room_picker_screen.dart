@@ -129,7 +129,7 @@ class _RoomPickerScreenState extends State<RoomPickerScreen> {
                         Expanded(
                           child: Text(
                             'Each tile is a real room picture. Tap one, then '
-                            'TAP the glowing objects inside to smash — nothing '
+                            'TAP the objects inside to smash — nothing '
                             'breaks by itself.',
                             style: Theme.of(context)
                                 .textTheme

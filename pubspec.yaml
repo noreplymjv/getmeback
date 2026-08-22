@@ -29,3 +29,4 @@ flutter:
     - assets/presets/
     - assets/sfx/
     - assets/rooms/
+    - assets/rooms/props/

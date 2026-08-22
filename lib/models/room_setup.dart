@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 
+import 'prop_sprite_catalog.dart';
+import 'prop_state.dart';
+import 'room_hotspots.dart';
+
 enum PropSmashStyle {
   shatter,
   spill,
@@ -22,6 +26,12 @@ class RoomProp {
     required this.style,
     this.throwable = false,
     this.reactions = const {},
+    this.spriteAsset,
+    this.materialType,
+    this.sizeNorm,
+    this.aspectRatio,
+    this.zIndex,
+    this.anchor,
   });
 
   final String id;
@@ -38,6 +48,35 @@ class RoomProp {
   /// Special reactions when another prop is thrown at this one.
   /// key = thrown prop id (or generic 'glass'), value = reaction style + message.
   final Map<String, PropReaction> reactions;
+
+  final String? spriteAsset;
+  final PropMaterial? materialType;
+  final double? sizeNorm;
+  final double? aspectRatio;
+  final int? zIndex;
+  final Offset? anchor;
+
+  PropMaterial get effectiveMaterial =>
+      materialType ?? PropSpriteCatalog.materialFor(id);
+
+  double get effectiveSizeNorm =>
+      sizeNorm ?? PropSpriteCatalog.sizeNormFor(id);
+
+  double get effectiveAspectRatio =>
+      aspectRatio ?? PropSpriteCatalog.aspectRatioFor(id);
+
+  int get effectiveZIndex => zIndex ?? PropSpriteCatalog.zIndexFor(id);
+
+  String resolvedSprite(String roomId) =>
+      spriteAsset ?? 'assets/rooms/props/${roomId}_$id.png';
+
+  Offset anchorFor(String roomId) =>
+      anchor ??
+      RoomHotspots.forProp(
+        roomId: roomId,
+        propId: id,
+        fallback: align,
+      );
 }
 
 class PropReaction {
@@ -62,6 +101,8 @@ class RoomSetup {
     required this.gradient,
     required this.props,
     this.assetPath,
+    this.spriteMode = true,
+    this.baseAssetPath,
   });
 
   final String id;
@@ -75,7 +116,14 @@ class RoomSetup {
   /// Illustrated room background under `assets/rooms/`.
   final String? assetPath;
 
+  /// When true, uses clean base + layered prop sprites instead of hotspot pins.
+  final bool spriteMode;
+  final String? baseAssetPath;
+
   String get resolvedAsset => assetPath ?? 'assets/rooms/$id.png';
+
+  String get resolvedBaseAsset =>
+      baseAssetPath ?? (spriteMode ? 'assets/rooms/${id}_base.png' : resolvedAsset);
 
   static RoomSetup? findById(String id) {
     for (final r in all) {
@@ -92,6 +140,7 @@ class RoomSetup {
       icon: Icons.kitchen,
       accent: Color(0xFFFF8A65),
       gradient: [Color(0xFF3E2723), Color(0xFF1A1A2E)],
+      baseAssetPath: 'assets/rooms/kitchen_base.png',
       props: [
         RoomProp(
           id: 'glass',
