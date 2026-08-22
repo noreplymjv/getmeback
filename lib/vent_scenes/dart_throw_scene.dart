@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../models/vent_target.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/base_vent_scene.dart';
 import '../../widgets/dramatic_fx.dart';
 import '../../widgets/scene_scale.dart';
 import '../../widgets/target_avatar.dart';
@@ -19,25 +20,10 @@ class DartThrowScene extends StatefulWidget {
   State<DartThrowScene> createState() => _DartThrowSceneState();
 }
 
-class _DartThrowSceneState extends State<DartThrowScene> {
+class _DartThrowSceneState extends BaseVentSceneState<DartThrowScene> {
   final List<Offset> _darts = [];
   int _hits = 0;
-  late final DramaticFxController _fx = DramaticFxController();
   Offset _center = Offset.zero;
-
-  @override
-  void initState() {
-    super.initState();
-    _fx.addListener(() {
-      if (mounted) setState(() {});
-    });
-  }
-
-  @override
-  void dispose() {
-    _fx.dispose();
-    super.dispose();
-  }
 
   void _throwDart(TapDownDetails details) {
     final box = context.findRenderObject() as RenderBox?;
@@ -50,9 +36,9 @@ class _DartThrowSceneState extends State<DartThrowScene> {
     final dist = (local - _center).distance;
     final isBullseye = dist < 55;
     if (isBullseye) {
-      _fx.megaImpact(at: local, color: AppTheme.accent);
+      fx.megaImpact(at: local, color: AppTheme.accent);
     } else {
-      _fx.impact(
+      fx.impact(
         at: local,
         count: 18,
         color: AppTheme.accent,
@@ -60,9 +46,9 @@ class _DartThrowSceneState extends State<DartThrowScene> {
       );
     }
     if (_hits >= 8) {
-      _fx.confettiBurst(at: _center, count: 70);
-      _fx.crackerBurst(at: _center, volleys: 4);
-      _fx.glitterRain(at: _center, count: 45);
+      fx.confettiBurst(at: _center, count: 70);
+      fx.crackerBurst(at: _center, volleys: 4);
+      fx.glitterRain(at: _center, count: 45);
       Future.delayed(const Duration(milliseconds: 900), () {
         if (mounted) context.go('/calm/${widget.target.id}');
       });
@@ -72,7 +58,7 @@ class _DartThrowSceneState extends State<DartThrowScene> {
   @override
   Widget build(BuildContext context) {
     return DramaticFxTicker(
-      controller: _fx,
+      controller: fx,
       child: VentSceneShell(
         target: widget.target,
         title: 'Dart Throw',
@@ -89,7 +75,7 @@ class _DartThrowSceneState extends State<DartThrowScene> {
             return GestureDetector(
               onTapDown: _throwDart,
               child: ventFxLayer(
-                fx: _fx,
+                fx: fx,
                 child: Stack(
                   alignment: Alignment.center,
                   children: [

@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../models/vent_target.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/base_vent_scene.dart';
 import '../../widgets/dramatic_fx.dart';
 import '../../widgets/scene_scale.dart';
 import '../../widgets/target_avatar.dart';
@@ -17,38 +18,23 @@ class TrashCanScene extends StatefulWidget {
   State<TrashCanScene> createState() => _TrashCanSceneState();
 }
 
-class _TrashCanSceneState extends State<TrashCanScene> {
-  late final DramaticFxController _fx = DramaticFxController();
+class _TrashCanSceneState extends BaseVentSceneState<TrashCanScene> {
   bool _thrown = false;
   double _throwProgress = 0;
   Offset _center = Offset.zero;
 
-  @override
-  void initState() {
-    super.initState();
-    _fx.addListener(() {
-      if (mounted) setState(() {});
-    });
-  }
-
-  @override
-  void dispose() {
-    _fx.dispose();
-    super.dispose();
-  }
-
   Future<void> _throwIn() async {
     if (_thrown) return;
     setState(() => _thrown = true);
-    _fx.impact(at: _center, color: AppTheme.accent, intensity: 0.9);
+    fx.impact(at: _center, color: AppTheme.accent, intensity: 0.9);
     for (var i = 1; i <= 15; i++) {
       await Future.delayed(const Duration(milliseconds: 40));
       if (!mounted) return;
       setState(() => _throwProgress = i / 15);
     }
-    _fx.confettiBurst(at: _center, count: 70);
-    _fx.crackerBurst(at: _center, volleys: 4);
-    _fx.glitterRain(at: _center, count: 40);
+    fx.confettiBurst(at: _center, count: 70);
+    fx.crackerBurst(at: _center, volleys: 4);
+    fx.glitterRain(at: _center, count: 40);
     if (mounted) context.go('/calm/${widget.target.id}');
   }
 
@@ -62,7 +48,7 @@ class _TrashCanSceneState extends State<TrashCanScene> {
     final avatarRotation = _throwProgress * 6.28;
 
     return DramaticFxTicker(
-      controller: _fx,
+      controller: fx,
       child: VentSceneShell(
         target: widget.target,
         title: 'Trash Can',
@@ -76,7 +62,7 @@ class _TrashCanSceneState extends State<TrashCanScene> {
             final avatarSize = scale.avatar(0.24);
             _center = Offset(area.width / 2, area.height * 0.5);
             return ventFxLayer(
-              fx: _fx,
+              fx: fx,
               child: Stack(
                 alignment: Alignment.center,
                 children: [

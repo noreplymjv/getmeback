@@ -1,6 +1,8 @@
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/services.dart';
 
+import 'storage_service.dart';
+
 enum Sfx {
   hit,
   smash,
@@ -24,7 +26,7 @@ class VentSfx {
 
   static final VentSfx instance = VentSfx._();
 
-  static const _poolSize = 4;
+  static const _poolSize = 6;
   final List<AudioPlayer> _pool = [];
   int _next = 0;
   bool _ready = false;
@@ -73,28 +75,35 @@ class VentSfx {
       init();
       return;
     }
+    // Round-robin pool — avoid stop()->play() on the same player every time.
     final player = _pool[_next % _pool.length];
     _next++;
-    player.stop().then((_) {
-      player.play(AssetSource('sfx/${sfx.name}.wav'));
-    }).catchError((_) {});
+    player.play(AssetSource('sfx/${sfx.name}.wav')).catchError((_) {});
   }
 
-  static void light() => HapticFeedback.selectionClick();
+  static bool get _hapticsOn => StorageService.instance.hapticsEnabled;
 
-  static void medium() => HapticFeedback.mediumImpact();
+  static void light() {
+    if (!_hapticsOn) return;
+    HapticFeedback.selectionClick();
+  }
+
+  static void medium() {
+    if (!_hapticsOn) return;
+    HapticFeedback.mediumImpact();
+  }
 
   static void heavy() {
+    if (!_hapticsOn) return;
     HapticFeedback.heavyImpact();
-    HapticFeedback.vibrate();
   }
 
   static Future<void> rumble() async {
+    if (!_hapticsOn) return;
     HapticFeedback.heavyImpact();
     await Future<void>.delayed(const Duration(milliseconds: 60));
     HapticFeedback.mediumImpact();
     await Future<void>.delayed(const Duration(milliseconds: 60));
     HapticFeedback.heavyImpact();
-    HapticFeedback.vibrate();
   }
 }

@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../models/vent_target.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/base_vent_scene.dart';
 import '../../widgets/dramatic_fx.dart';
 import '../../widgets/scene_scale.dart';
 import '../../widgets/target_avatar.dart';
@@ -19,12 +20,10 @@ class FirePoofScene extends StatefulWidget {
   State<FirePoofScene> createState() => _FirePoofSceneState();
 }
 
-class _FirePoofSceneState extends State<FirePoofScene>
-    with SingleTickerProviderStateMixin {
+class _FirePoofSceneState extends BaseVentSceneState<FirePoofScene> {
   bool _burning = false;
   double _burnProgress = 0;
   late AnimationController _flameController;
-  late final DramaticFxController _fx = DramaticFxController();
   final _rng = Random();
 
   @override
@@ -34,14 +33,10 @@ class _FirePoofSceneState extends State<FirePoofScene>
       vsync: this,
       duration: const Duration(milliseconds: 400),
     )..repeat(reverse: true);
-    _fx.addListener(() {
-      if (mounted) setState(() {});
-    });
   }
 
   @override
   void dispose() {
-    _fx.dispose();
     _flameController.dispose();
     super.dispose();
   }
@@ -50,8 +45,8 @@ class _FirePoofSceneState extends State<FirePoofScene>
     if (_burning) return;
     setState(() => _burning = true);
     final center = Offset(area.width / 2, area.height * 0.48);
-    _fx.fireBurst(at: center, count: 45);
-    _fx.comicPop(at: center, text: 'FWOOSH!', color: const Color(0xFFFF7043));
+    fx.fireBurst(at: center, count: 45);
+    fx.comicPop(at: center, text: 'FWOOSH!', color: const Color(0xFFFF7043));
 
     for (var i = 1; i <= 25; i++) {
       await Future.delayed(const Duration(milliseconds: 80));
@@ -62,7 +57,7 @@ class _FirePoofSceneState extends State<FirePoofScene>
         (_rng.nextDouble() - 0.5) * 80,
         (_rng.nextDouble() - 0.5) * 60 - _burnProgress * 20,
       );
-      _fx.impact(
+      fx.impact(
         at: emberAt,
         count: 10 + (i % 3) * 4,
         intensity: 0.55 + _burnProgress * 0.5,
@@ -74,13 +69,13 @@ class _FirePoofSceneState extends State<FirePoofScene>
         ),
       );
       if (i % 4 == 0) {
-        _fx.fireBurst(at: emberAt, count: 12);
-        _fx.smokeBurst(at: emberAt, count: 4);
+        fx.fireBurst(at: emberAt, count: 12);
+        fx.smokeBurst(at: emberAt, count: 4);
       }
     }
 
-    _fx.megaImpact(at: center, color: const Color(0xFFFF7043));
-    _fx.smokeBurst(at: center, count: 18, color: Colors.grey.shade700);
+    fx.megaImpact(at: center, color: const Color(0xFFFF7043));
+    fx.smokeBurst(at: center, count: 18, color: Colors.grey.shade700);
     await Future.delayed(const Duration(milliseconds: 500));
     if (mounted) context.go('/calm/${widget.target.id}');
   }
@@ -88,7 +83,7 @@ class _FirePoofSceneState extends State<FirePoofScene>
   @override
   Widget build(BuildContext context) {
     return DramaticFxTicker(
-      controller: _fx,
+      controller: fx,
       child: VentSceneShell(
         target: widget.target,
         title: 'Fire Poof',
@@ -105,7 +100,7 @@ class _FirePoofSceneState extends State<FirePoofScene>
             return GestureDetector(
               onTap: () => _ignite(area),
               child: ventFxLayer(
-                fx: _fx,
+                fx: fx,
                 child: Center(
                   child: Stack(
                     alignment: Alignment.center,

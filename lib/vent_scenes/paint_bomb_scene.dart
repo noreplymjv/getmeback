@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../models/vent_target.dart';
+import '../../widgets/base_vent_scene.dart';
 import '../../widgets/dramatic_fx.dart';
 import '../../widgets/scene_scale.dart';
 import '../../widgets/target_avatar.dart';
@@ -18,8 +19,7 @@ class PaintBombScene extends StatefulWidget {
   State<PaintBombScene> createState() => _PaintBombSceneState();
 }
 
-class _PaintBombSceneState extends State<PaintBombScene> {
-  late final DramaticFxController _fx = DramaticFxController();
+class _PaintBombSceneState extends BaseVentSceneState<PaintBombScene> {
   int _splats = 0;
   final _rng = Random();
   static const _paints = [
@@ -31,29 +31,15 @@ class _PaintBombSceneState extends State<PaintBombScene> {
     Color(0xFFFF4081),
   ];
 
-  @override
-  void initState() {
-    super.initState();
-    _fx.addListener(() {
-      if (mounted) setState(() {});
-    });
-  }
-
-  @override
-  void dispose() {
-    _fx.dispose();
-    super.dispose();
-  }
-
   void _splash(Offset at, Offset center) {
     if (_splats >= 8) return;
     setState(() => _splats++);
     final color = _paints[_rng.nextInt(_paints.length)];
-    _fx.dripBurst(at: at, count: 28, color: color);
-    _fx.impact(at: at, count: 18, color: color, intensity: 0.85, comic: false);
-    _fx.comicPop(at: at, text: 'SPLAT!', color: color);
+    fx.dripBurst(at: at, count: 28, color: color);
+    fx.impact(at: at, count: 18, color: color, intensity: 0.85, comic: false);
+    fx.comicPop(at: at, text: 'SPLAT!', color: color);
     if (_splats >= 8) {
-      _fx.confettiBurst(at: center, count: 80);
+      fx.confettiBurst(at: center, count: 80);
       Future.delayed(const Duration(milliseconds: 900), () {
         if (mounted) context.go('/calm/${widget.target.id}');
       });
@@ -63,7 +49,7 @@ class _PaintBombSceneState extends State<PaintBombScene> {
   @override
   Widget build(BuildContext context) {
     return DramaticFxTicker(
-      controller: _fx,
+      controller: fx,
       child: VentSceneShell(
         target: widget.target,
         title: 'Paint Bomb',
@@ -80,7 +66,7 @@ class _PaintBombSceneState extends State<PaintBombScene> {
             return GestureDetector(
               onTapDown: (d) => _splash(d.localPosition, center),
               child: ventFxLayer(
-                fx: _fx,
+                fx: fx,
                 child: Center(
                   child: Stack(
                     alignment: Alignment.center,

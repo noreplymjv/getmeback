@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../models/vent_target.dart';
 import '../../services/vent_sfx.dart';
+import '../../widgets/base_vent_scene.dart';
 import '../../widgets/dramatic_fx.dart';
 import '../../widgets/scene_scale.dart';
 import '../../widgets/target_avatar.dart';
@@ -17,9 +18,7 @@ class AnvilDropScene extends StatefulWidget {
   State<AnvilDropScene> createState() => _AnvilDropSceneState();
 }
 
-class _AnvilDropSceneState extends State<AnvilDropScene>
-    with SingleTickerProviderStateMixin {
-  late final DramaticFxController _fx = DramaticFxController();
+class _AnvilDropSceneState extends BaseVentSceneState<AnvilDropScene> {
   late AnimationController _drop;
   int _drops = 0;
   bool _done = false;
@@ -31,14 +30,10 @@ class _AnvilDropSceneState extends State<AnvilDropScene>
       vsync: this,
       duration: const Duration(milliseconds: 420),
     );
-    _fx.addListener(() {
-      if (mounted) setState(() {});
-    });
   }
 
   @override
   void dispose() {
-    _fx.dispose();
     _drop.dispose();
     super.dispose();
   }
@@ -50,14 +45,14 @@ class _AnvilDropSceneState extends State<AnvilDropScene>
     setState(() => _drops++);
     VentSfx.instance.play(Sfx.boom);
     if (_drops >= 3) {
-      _fx.megaImpact(at: center);
-      _fx.debrisRain(at: center, count: 40);
-      _fx.comicPop(at: center, text: 'SPLAT!');
+      fx.megaImpact(at: center);
+      fx.debrisRain(at: center, count: 40);
+      fx.comicPop(at: center, text: 'SPLAT!');
       setState(() => _done = true);
       await Future<void>.delayed(const Duration(milliseconds: 900));
       if (mounted) context.go('/calm/${widget.target.id}');
     } else {
-      _fx.impact(at: center, count: 40, intensity: 1.3);
+      fx.impact(at: center, count: 40, intensity: 1.3);
     }
     _drop.reset();
   }
@@ -65,7 +60,7 @@ class _AnvilDropSceneState extends State<AnvilDropScene>
   @override
   Widget build(BuildContext context) {
     return DramaticFxTicker(
-      controller: _fx,
+      controller: fx,
       child: VentSceneShell(
         target: widget.target,
         title: 'Anvil Drop',
@@ -83,7 +78,7 @@ class _AnvilDropSceneState extends State<AnvilDropScene>
             return GestureDetector(
               onTap: () => _dropAnvil(center),
               child: ventFxLayer(
-                fx: _fx,
+                fx: fx,
                 child: Stack(
                   alignment: Alignment.center,
                   children: [

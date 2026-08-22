@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../models/vent_target.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/base_vent_scene.dart';
 import '../../widgets/dramatic_fx.dart';
 import '../../widgets/scene_scale.dart';
 import '../../widgets/target_avatar.dart';
@@ -19,9 +20,7 @@ class SledgehammerScene extends StatefulWidget {
   State<SledgehammerScene> createState() => _SledgehammerSceneState();
 }
 
-class _SledgehammerSceneState extends State<SledgehammerScene>
-    with SingleTickerProviderStateMixin {
-  late final DramaticFxController _fx = DramaticFxController();
+class _SledgehammerSceneState extends BaseVentSceneState<SledgehammerScene> {
   int _smashes = 0;
   bool _swinging = false;
   late AnimationController _swingController;
@@ -30,9 +29,6 @@ class _SledgehammerSceneState extends State<SledgehammerScene>
   @override
   void initState() {
     super.initState();
-    _fx.addListener(() {
-      if (mounted) setState(() {});
-    });
     _swingController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 350),
@@ -41,7 +37,6 @@ class _SledgehammerSceneState extends State<SledgehammerScene>
 
   @override
   void dispose() {
-    _fx.dispose();
     _swingController.dispose();
     super.dispose();
   }
@@ -51,10 +46,10 @@ class _SledgehammerSceneState extends State<SledgehammerScene>
     setState(() => _swinging = true);
     await _swingController.forward(from: 0);
     if (!mounted) return;
-    _fx.megaImpact(at: _center, color: AppTheme.accent);
-    _fx.comicPop(at: _center, color: AppTheme.accent);
+    fx.megaImpact(at: _center, color: AppTheme.accent);
+    fx.comicPop(at: _center, color: AppTheme.accent);
     if (_smashes >= 3) {
-      _fx.crackerBurst(at: _center, volleys: 2, playSound: false);
+      fx.crackerBurst(at: _center, volleys: 2, playSound: false);
     }
     setState(() {
       _smashes++;
@@ -62,8 +57,8 @@ class _SledgehammerSceneState extends State<SledgehammerScene>
     });
     _swingController.reset();
     if (_smashes >= 5) {
-      _fx.crackerBurst(at: _center, volleys: 5);
-      _fx.glitterRain(at: _center, count: 50);
+      fx.crackerBurst(at: _center, volleys: 5);
+      fx.glitterRain(at: _center, count: 50);
       await Future.delayed(const Duration(milliseconds: 700));
       if (mounted) context.go('/calm/${widget.target.id}');
     }
@@ -72,7 +67,7 @@ class _SledgehammerSceneState extends State<SledgehammerScene>
   @override
   Widget build(BuildContext context) {
     return DramaticFxTicker(
-      controller: _fx,
+      controller: fx,
       child: VentSceneShell(
         target: widget.target,
         title: 'Sledgehammer',
@@ -87,7 +82,7 @@ class _SledgehammerSceneState extends State<SledgehammerScene>
             final avatarSize = scale.avatar(0.32);
             _center = Offset(area.width / 2, area.height * 0.5);
             return ventFxLayer(
-              fx: _fx,
+              fx: fx,
               child: GestureDetector(
                 onTap: _smash,
                 child: Stack(

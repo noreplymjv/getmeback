@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../models/vent_target.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/base_vent_scene.dart';
 import '../../widgets/dramatic_fx.dart';
 import '../../widgets/scene_scale.dart';
 import '../../widgets/target_avatar.dart';
@@ -19,9 +20,7 @@ class CatapultScene extends StatefulWidget {
   State<CatapultScene> createState() => _CatapultSceneState();
 }
 
-class _CatapultSceneState extends State<CatapultScene>
-    with SingleTickerProviderStateMixin {
-  late final DramaticFxController _fx = DramaticFxController();
+class _CatapultSceneState extends BaseVentSceneState<CatapultScene> {
   bool _launched = false;
   bool _apexConfettiFired = false;
   late AnimationController _launchController;
@@ -30,9 +29,6 @@ class _CatapultSceneState extends State<CatapultScene>
   @override
   void initState() {
     super.initState();
-    _fx.addListener(() {
-      if (mounted) setState(() {});
-    });
     _launchController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1500),
@@ -44,14 +40,13 @@ class _CatapultSceneState extends State<CatapultScene>
     if (!_launched || _apexConfettiFired) return;
     if (_launchController.value >= 0.45 && _launchController.value <= 0.55) {
       _apexConfettiFired = true;
-      _fx.confettiBurst(at: _center);
+      fx.confettiBurst(at: _center);
     }
   }
 
   @override
   void dispose() {
     _launchController.removeListener(_onLaunchTick);
-    _fx.dispose();
     _launchController.dispose();
     super.dispose();
   }
@@ -59,20 +54,20 @@ class _CatapultSceneState extends State<CatapultScene>
   Future<void> _launch() async {
     if (_launched) return;
     setState(() => _launched = true);
-    _fx.megaImpact(at: _center, color: AppTheme.accentSecondary);
-    _fx.comicPop(at: _center, text: 'YEET!', color: AppTheme.accentSecondary);
-    _fx.smokeBurst(at: Offset(_center.dx, _center.dy + 60), count: 14);
+    fx.megaImpact(at: _center, color: AppTheme.accentSecondary);
+    fx.comicPop(at: _center, text: 'YEET!', color: AppTheme.accentSecondary);
+    fx.smokeBurst(at: Offset(_center.dx, _center.dy + 60), count: 14);
     await _launchController.forward();
-    _fx.confettiBurst(at: _center.translate(180, -100), count: 50);
-    _fx.crackerBurst(at: _center.translate(180, -100), volleys: 4);
-    _fx.glitterRain(at: _center.translate(180, -100), count: 40);
+    fx.confettiBurst(at: _center.translate(180, -100), count: 50);
+    fx.crackerBurst(at: _center.translate(180, -100), volleys: 4);
+    fx.glitterRain(at: _center.translate(180, -100), count: 40);
     if (mounted) context.go('/calm/${widget.target.id}');
   }
 
   @override
   Widget build(BuildContext context) {
     return DramaticFxTicker(
-      controller: _fx,
+      controller: fx,
       child: VentSceneShell(
         target: widget.target,
         title: 'Catapult',
@@ -85,7 +80,7 @@ class _CatapultSceneState extends State<CatapultScene>
             final rigWidth = scale.container(0.5);
             _center = Offset(area.width / 2, area.height * 0.5);
             return ventFxLayer(
-              fx: _fx,
+              fx: fx,
               child: GestureDetector(
                 onPanEnd: (details) {
                   if (details.velocity.pixelsPerSecond.dy < -200) _launch();

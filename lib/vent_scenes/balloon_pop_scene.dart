@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../models/vent_target.dart';
 import '../../theme/app_theme.dart';
 import '../../services/vent_sfx.dart';
+import '../../widgets/base_vent_scene.dart';
 import '../../widgets/dramatic_fx.dart';
 import '../../widgets/scene_scale.dart';
 import '../../widgets/target_avatar.dart';
@@ -18,32 +19,17 @@ class BalloonPopScene extends StatefulWidget {
   State<BalloonPopScene> createState() => _BalloonPopSceneState();
 }
 
-class _BalloonPopSceneState extends State<BalloonPopScene> {
+class _BalloonPopSceneState extends BaseVentSceneState<BalloonPopScene> {
   bool _popped = false;
-  late final DramaticFxController _fx = DramaticFxController();
-
-  @override
-  void initState() {
-    super.initState();
-    _fx.addListener(() {
-      if (mounted) setState(() {});
-    });
-  }
-
-  @override
-  void dispose() {
-    _fx.dispose();
-    super.dispose();
-  }
 
   void _pop(Offset center) {
     if (_popped) return;
     setState(() => _popped = true);
     VentSfx.instance.play(Sfx.pop);
-    _fx.megaImpact(at: center, color: AppTheme.accent);
-    _fx.confettiBurst(at: center, count: 90);
-    _fx.crackerBurst(at: center, volleys: 5);
-    _fx.glitterRain(at: center, count: 55);
+    fx.megaImpact(at: center, color: AppTheme.accent);
+    fx.confettiBurst(at: center, count: 90);
+    fx.crackerBurst(at: center, volleys: 5);
+    fx.glitterRain(at: center, count: 55);
     Future.delayed(const Duration(milliseconds: 1200), () {
       if (mounted) context.go('/calm/${widget.target.id}');
     });
@@ -52,7 +38,7 @@ class _BalloonPopSceneState extends State<BalloonPopScene> {
   @override
   Widget build(BuildContext context) {
     return DramaticFxTicker(
-      controller: _fx,
+      controller: fx,
       child: VentSceneShell(
         target: widget.target,
         title: 'Balloon Pop',
@@ -67,7 +53,7 @@ class _BalloonPopSceneState extends State<BalloonPopScene> {
             return GestureDetector(
               onTap: () => _pop(center),
               child: ventFxLayer(
-                fx: _fx,
+                fx: fx,
                 child: Center(
                   child: AnimatedScale(
                     scale: _popped ? 2.8 : 1.0,

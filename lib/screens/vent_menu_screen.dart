@@ -6,6 +6,7 @@ import '../models/vent_target.dart';
 import '../services/storage_service.dart';
 import '../services/vent_sfx.dart';
 import '../theme/app_theme.dart';
+import '../utils/target_image.dart';
 import '../widgets/premium_chrome.dart';
 import '../widgets/target_avatar.dart';
 import '../widgets/vent_action_card.dart';
@@ -31,6 +32,9 @@ class _VentMenuScreenState extends State<VentMenuScreen> {
   Future<void> _loadTarget() async {
     final targets = await StorageService.instance.loadTargets();
     final target = targets.where((t) => t.id == widget.targetId).firstOrNull;
+    if (target != null) {
+      TargetImage.preloadTarget(target);
+    }
     if (mounted) setState(() => _target = target);
   }
 
@@ -45,6 +49,9 @@ class _VentMenuScreenState extends State<VentMenuScreen> {
     }
 
     final target = _target!;
+    final faceVents = VentAction.all
+        .where((a) => a.type != VentActionType.roomRampage)
+        .toList();
 
     return Scaffold(
       extendBodyBehindAppBar: true,
@@ -52,7 +59,13 @@ class _VentMenuScreenState extends State<VentMenuScreen> {
         title: const Text('Choose Your Vent'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.go('/'),
+          onPressed: () {
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.go('/characters');
+            }
+          },
         ),
       ),
       body: PremiumBackdrop(
@@ -83,11 +96,15 @@ class _VentMenuScreenState extends State<VentMenuScreen> {
                               const SizedBox(width: 10),
                               Expanded(
                                 child: Text(
-                                  'Pick a scene. Make it theatrical.',
+                                  'Face vents only — tap a scene below.\n'
+                                  'For room smashing, use Home → Rooms & Scenes.',
                                   style: Theme.of(context)
                                       .textTheme
                                       .bodySmall
-                                      ?.copyWith(color: AppTheme.goldSoft),
+                                      ?.copyWith(
+                                        color: AppTheme.goldSoft,
+                                        height: 1.35,
+                                      ),
                                 ),
                               ),
                             ],
@@ -105,9 +122,9 @@ class _VentMenuScreenState extends State<VentMenuScreen> {
                         crossAxisSpacing: 8,
                         mainAxisExtent: 110,
                       ),
-                      itemCount: VentAction.all.length,
+                      itemCount: faceVents.length,
                       itemBuilder: (context, index) {
-                        final action = VentAction.all[index];
+                        final action = faceVents[index];
                         return VentActionCard(
                           action: action,
                           index: index,

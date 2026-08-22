@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../models/vent_target.dart';
 import '../../services/vent_sfx.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/base_vent_scene.dart';
 import '../../widgets/dramatic_fx.dart';
 import '../../widgets/scene_scale.dart';
 import '../../widgets/target_avatar.dart';
@@ -18,37 +19,22 @@ class IceShatterScene extends StatefulWidget {
   State<IceShatterScene> createState() => _IceShatterSceneState();
 }
 
-class _IceShatterSceneState extends State<IceShatterScene> {
+class _IceShatterSceneState extends BaseVentSceneState<IceShatterScene> {
   bool _frozen = false;
   bool _shattered = false;
   int _taps = 0;
-  late final DramaticFxController _fx = DramaticFxController();
-
-  @override
-  void initState() {
-    super.initState();
-    _fx.addListener(() {
-      if (mounted) setState(() {});
-    });
-  }
-
-  @override
-  void dispose() {
-    _fx.dispose();
-    super.dispose();
-  }
 
   void _freeze(Offset center) {
     if (_frozen) return;
     setState(() => _frozen = true);
-    _fx.swirlBurst(at: center, count: 50, color: AppTheme.accentSecondary);
-    _fx.comicPop(at: center, text: 'FREEZE!', color: AppTheme.accentSecondary);
+    fx.swirlBurst(at: center, count: 50, color: AppTheme.accentSecondary);
+    fx.comicPop(at: center, text: 'FREEZE!', color: AppTheme.accentSecondary);
   }
 
   void _tapIce(Offset center) {
     if (!_frozen || _shattered) return;
     setState(() => _taps++);
-    _fx.impact(
+    fx.impact(
       at: center,
       count: 20 + _taps * 8,
       color: AppTheme.accentSecondary,
@@ -57,10 +43,10 @@ class _IceShatterSceneState extends State<IceShatterScene> {
     VentSfx.instance.play(Sfx.crack);
     if (_taps >= 5) {
       setState(() => _shattered = true);
-      _fx.megaImpact(at: center, color: AppTheme.accentSecondary);
-      _fx.confettiBurst(at: center, count: 60);
-      _fx.crackerBurst(at: center, volleys: 4);
-      _fx.glitterRain(at: center, count: 45);
+      fx.megaImpact(at: center, color: AppTheme.accentSecondary);
+      fx.confettiBurst(at: center, count: 60);
+      fx.crackerBurst(at: center, volleys: 4);
+      fx.glitterRain(at: center, count: 45);
       Future.delayed(const Duration(milliseconds: 1000), () {
         if (mounted) context.go('/calm/${widget.target.id}');
       });
@@ -70,7 +56,7 @@ class _IceShatterSceneState extends State<IceShatterScene> {
   @override
   Widget build(BuildContext context) {
     return DramaticFxTicker(
-      controller: _fx,
+      controller: fx,
       child: VentSceneShell(
         target: widget.target,
         title: 'Ice Shatter',
@@ -91,7 +77,7 @@ class _IceShatterSceneState extends State<IceShatterScene> {
             return GestureDetector(
               onTap: () => !_frozen ? _freeze(center) : _tapIce(center),
               child: ventFxLayer(
-                fx: _fx,
+                fx: fx,
                 child: Center(
                   child: AnimatedSwitcher(
                     duration: const Duration(milliseconds: 400),

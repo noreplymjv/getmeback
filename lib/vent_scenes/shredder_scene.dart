@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../models/vent_target.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/base_vent_scene.dart';
 import '../../widgets/dramatic_fx.dart';
 import '../../widgets/scene_scale.dart';
 import '../../widgets/target_avatar.dart';
@@ -17,12 +18,10 @@ class ShredderScene extends StatefulWidget {
   State<ShredderScene> createState() => _ShredderSceneState();
 }
 
-class _ShredderSceneState extends State<ShredderScene>
-    with SingleTickerProviderStateMixin {
+class _ShredderSceneState extends BaseVentSceneState<ShredderScene> {
   bool _shredding = false;
   double _shredProgress = 0;
   late AnimationController _bladeController;
-  late final DramaticFxController _fx = DramaticFxController();
   Offset _center = Offset.zero;
 
   @override
@@ -32,14 +31,10 @@ class _ShredderSceneState extends State<ShredderScene>
       vsync: this,
       duration: const Duration(milliseconds: 200),
     );
-    _fx.addListener(() {
-      if (mounted) setState(() {});
-    });
   }
 
   @override
   void dispose() {
-    _fx.dispose();
     _bladeController.dispose();
     super.dispose();
   }
@@ -47,20 +42,20 @@ class _ShredderSceneState extends State<ShredderScene>
   Future<void> _shred() async {
     if (_shredding) return;
     setState(() => _shredding = true);
-    _fx.impact(at: _center, intensity: 1.2);
-    _fx.comicPop(at: _center, text: 'RRRRIP!');
+    fx.impact(at: _center, intensity: 1.2);
+    fx.comicPop(at: _center, text: 'RRRRIP!');
     _bladeController.repeat();
     for (var i = 1; i <= 25; i++) {
       await Future.delayed(const Duration(milliseconds: 60));
       if (!mounted) return;
       setState(() => _shredProgress = i / 25);
       if (i % 4 == 0) {
-        _fx.debrisRain(
+        fx.debrisRain(
           at: Offset(_center.dx, _center.dy + 60),
           count: 12,
           color: AppTheme.accent.withValues(alpha: 0.8),
         );
-        _fx.impact(
+        fx.impact(
           at: Offset(_center.dx, _center.dy + 40),
           count: 15,
           intensity: 0.7,
@@ -69,10 +64,10 @@ class _ShredderSceneState extends State<ShredderScene>
       }
     }
     _bladeController.stop();
-    _fx.megaImpact(at: Offset(_center.dx, _center.dy + 80));
-    _fx.debrisRain(at: Offset(_center.dx, _center.dy + 80), count: 35);
-    _fx.crackerBurst(at: Offset(_center.dx, _center.dy + 80), volleys: 4);
-    _fx.glitterRain(at: Offset(_center.dx, _center.dy + 80), count: 40);
+    fx.megaImpact(at: Offset(_center.dx, _center.dy + 80));
+    fx.debrisRain(at: Offset(_center.dx, _center.dy + 80), count: 35);
+    fx.crackerBurst(at: Offset(_center.dx, _center.dy + 80), volleys: 4);
+    fx.glitterRain(at: Offset(_center.dx, _center.dy + 80), count: 40);
     if (mounted) {
       await Future.delayed(const Duration(milliseconds: 700));
       if (mounted) context.go('/calm/${widget.target.id}');
@@ -82,7 +77,7 @@ class _ShredderSceneState extends State<ShredderScene>
   @override
   Widget build(BuildContext context) {
     return DramaticFxTicker(
-      controller: _fx,
+      controller: fx,
       child: VentSceneShell(
         target: widget.target,
         title: 'Paper Shredder',
@@ -98,7 +93,7 @@ class _ShredderSceneState extends State<ShredderScene>
               constraints.maxHeight * 0.35,
             );
             return ventFxLayer(
-              fx: _fx,
+              fx: fx,
               child: Stack(
                 alignment: Alignment.center,
                 children: [

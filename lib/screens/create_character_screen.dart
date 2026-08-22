@@ -12,6 +12,8 @@ import '../services/storage_service.dart';
 import '../theme/app_theme.dart';
 import '../utils/io_io.dart' if (dart.library.html) '../utils/io_stub.dart' as io;
 import '../utils/target_image.dart';
+import '../utils/text_sanitize.dart';
+import '../utils/web_blob_store.dart' as blobs;
 import '../widgets/premium_chrome.dart';
 import '../widgets/responsive_columns.dart';
 
@@ -25,6 +27,7 @@ class CreateCharacterScreen extends StatefulWidget {
 class _CreateCharacterScreenState extends State<CreateCharacterScreen> {
   final _nameController = TextEditingController();
   String? _selectedPresetId;
+  PresetCategory _selectedCategory = PresetCategory.all;
   String? _imagePath;
   Uint8List? _imageBytes;
   bool _saving = false;
@@ -42,9 +45,9 @@ class _CreateCharacterScreenState extends State<CreateCharacterScreen> {
       final picker = ImagePicker();
       final file = await picker.pickImage(
         source: source,
-        maxWidth: 1024,
-        maxHeight: 1024,
-        imageQuality: 85,
+        maxWidth: 720,
+        maxHeight: 720,
+        imageQuality: 72,
       );
       if (file == null) return;
 
@@ -52,7 +55,6 @@ class _CreateCharacterScreenState extends State<CreateCharacterScreen> {
       setState(() {
         _imageBytes = bytes;
         _selectedPresetId = null;
-        // On web, dart:io paths are useless — keep a display marker.
         _imagePath = kIsWeb ? 'web-picked' : file.path;
       });
     } catch (e) {
@@ -64,8 +66,20 @@ class _CreateCharacterScreenState extends State<CreateCharacterScreen> {
     }
   }
 
+  void _selectPreset(PresetCharacter preset) {
+    setState(() {
+      _selectedPresetId = preset.id;
+      _imagePath = null;
+      _imageBytes = null;
+      if (_nameController.text.trim().isEmpty ||
+          PresetCharacter.all.any((p) => p.name == _nameController.text.trim())) {
+        _nameController.text = preset.name;
+      }
+    });
+  }
+
   Future<void> _save() async {
-    final name = _nameController.text.trim();
+    final name = sanitizeTargetName(_nameController.text);
     if (name.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please enter a name or label')),
@@ -81,27 +95,30 @@ class _CreateCharacterScreenState extends State<CreateCharacterScreen> {
 
     setState(() => _saving = true);
 
+    final targetId = const Uuid().v4();
     String? savedImagePath;
     try {
       if (_imageBytes != null) {
         if (kIsWeb) {
-          // Persist as data URI in SharedPreferences (local-only).
-          savedImagePath = TargetImage.encodeJpegBytes(_imageBytes!);
+          await blobs.putPhotoBlob(targetId, _imageBytes!);
+          savedImagePath = TargetImage.webBlobRef(targetId);
         } else {
           final docs = await io.appDocumentsPath();
-          final imagesDir = '$docs/target_images';
+          final imagesDir = '$docs/${TargetImage.relativeDir}';
           await io.ensureDir(imagesDir);
-          final id = const Uuid().v4();
-          savedImagePath = '$imagesDir/$id.jpg';
-          await io.writeBytes(savedImagePath, _imageBytes!);
+          final fileName = '$targetId.jpg';
+          final abs = '$imagesDir/$fileName';
+          await io.writeBytes(abs, _imageBytes!);
+          savedImagePath = '${TargetImage.relativeDir}/$fileName';
         }
       } else if (_imagePath != null && !kIsWeb && _imagePath != 'web-picked') {
         final docs = await io.appDocumentsPath();
-        final imagesDir = '$docs/target_images';
+        final imagesDir = '$docs/${TargetImage.relativeDir}';
         await io.ensureDir(imagesDir);
-        final id = const Uuid().v4();
-        savedImagePath = '$imagesDir/$id.jpg';
-        await io.copyFile(_imagePath!, savedImagePath);
+        final fileName = '$targetId.jpg';
+        final abs = '$imagesDir/$fileName';
+        await io.copyFile(_imagePath!, abs);
+        savedImagePath = '${TargetImage.relativeDir}/$fileName';
       }
     } catch (e) {
       if (mounted) {
@@ -114,7 +131,7 @@ class _CreateCharacterScreenState extends State<CreateCharacterScreen> {
     }
 
     final target = VentTarget(
-      id: const Uuid().v4(),
+      id: targetId,
       name: name,
       presetId: _selectedPresetId,
       imagePath: savedImagePath,
@@ -130,10 +147,11 @@ class _CreateCharacterScreenState extends State<CreateCharacterScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final filteredPresets = PresetCharacter.byCategory(_selectedCategory);
     final gridWidth = MediaQuery.sizeOf(context).width - 48;
     final presetCols = responsivePresetColumns(
       gridWidth,
-      PresetCharacter.all.length,
+      filteredPresets.length,
     );
 
     return Scaffold(
@@ -143,182 +161,259 @@ class _CreateCharacterScreenState extends State<CreateCharacterScreen> {
       ),
       body: PremiumBackdrop(
         child: SafeArea(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            TextField(
-              controller: _nameController,
-              decoration: const InputDecoration(
-                labelText: 'Name / Label',
-                hintText: 'e.g. That rude coworker',
-              ),
-              textCapitalization: TextCapitalization.sentences,
-            ),
-            const SizedBox(height: 32),
-            Text(
-              'Pick a Preset',
-              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                    fontSize: 20,
-                  ),
-            ),
-            const SizedBox(height: 12),
-            GridView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: presetCols,
-                mainAxisSpacing: 8,
-                crossAxisSpacing: 8,
-                childAspectRatio: 0.82,
-              ),
-              itemCount: PresetCharacter.all.length,
-              itemBuilder: (context, index) {
-                final preset = PresetCharacter.all[index];
-                final selected = _selectedPresetId == preset.id;
-                return GestureDetector(
-                  onTap: () => setState(() {
-                    _selectedPresetId = preset.id;
-                    _imagePath = null;
-                    _imageBytes = null;
-                  }),
-                  child: LayoutBuilder(
-                    builder: (context, constraints) {
-                      final side = constraints.maxWidth;
-                      final imageSide = (side * 0.72).clamp(40.0, 72.0);
-                      final emojiSize = imageSide * 0.45;
-                      return AnimatedContainer(
-                        duration: const Duration(milliseconds: 220),
-                        decoration: BoxDecoration(
-                          color: preset.color.withValues(alpha: 0.22),
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(
-                            color: selected
-                                ? AppTheme.gold
-                                : Colors.white.withValues(alpha: 0.08),
-                            width: selected ? 2 : 1,
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 640),
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    TextField(
+                      controller: _nameController,
+                      decoration: const InputDecoration(
+                        labelText: 'Name / Label',
+                        hintText: 'e.g. Boss, Toxic Ex, Loud Neighbor',
+                      ),
+                      textCapitalization: TextCapitalization.sentences,
+                    ),
+                    const SizedBox(height: 28),
+                    Row(
+                      children: [
+                        Text(
+                          'Pick a Preset Character',
+                          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                                fontSize: 19,
+                              ),
+                        ),
+                        const Spacer(),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: AppTheme.gold.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            '${filteredPresets.length} archetypes',
+                            style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              color: AppTheme.gold,
+                            ),
                           ),
                         ),
-                        clipBehavior: Clip.antiAlias,
-                        child: Column(
-                          children: [
-                            Padding(
-                              padding: const EdgeInsets.fromLTRB(6, 6, 6, 2),
-                              child: SizedBox(
-                                width: imageSide,
-                                height: imageSide,
-                                child: ClipRRect(
-                                  borderRadius: BorderRadius.circular(8),
-                                  child: preset.assetPath != null
-                                      ? Image.asset(
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    // Category Filter Chips
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: PresetCategory.values.map((cat) {
+                          final selected = _selectedCategory == cat;
+                          return Padding(
+                            padding: const EdgeInsets.only(right: 8),
+                            child: ChoiceChip(
+                              label: Text(cat.label),
+                              selected: selected,
+                              selectedColor: AppTheme.gold.withValues(alpha: 0.25),
+                              backgroundColor: AppTheme.card,
+                              labelStyle: TextStyle(
+                                fontSize: 12,
+                                fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                                color: selected ? AppTheme.gold : AppTheme.textSecondary,
+                              ),
+                              side: BorderSide(
+                                color: selected
+                                    ? AppTheme.gold
+                                    : Colors.white.withValues(alpha: 0.1),
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(18),
+                              ),
+                              onSelected: (_) => setState(() => _selectedCategory = cat),
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    GridView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: presetCols,
+                        mainAxisSpacing: 10,
+                        crossAxisSpacing: 10,
+                        childAspectRatio: 0.82,
+                      ),
+                      itemCount: filteredPresets.length,
+                      itemBuilder: (context, index) {
+                        final preset = filteredPresets[index];
+                        final selected = _selectedPresetId == preset.id;
+                        return InkWell(
+                          onTap: () => _selectPreset(preset),
+                          borderRadius: BorderRadius.circular(16),
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 200),
+                            decoration: BoxDecoration(
+                              color: selected
+                                  ? preset.color.withValues(alpha: 0.35)
+                                  : AppTheme.card.withValues(alpha: 0.75),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: selected
+                                    ? AppTheme.gold
+                                    : Colors.white.withValues(alpha: 0.08),
+                                width: selected ? 2.0 : 1.0,
+                              ),
+                              boxShadow: selected
+                                  ? [
+                                      BoxShadow(
+                                        color: AppTheme.gold.withValues(alpha: 0.25),
+                                        blurRadius: 12,
+                                        offset: const Offset(0, 2),
+                                      ),
+                                    ]
+                                  : null,
+                            ),
+                            child: Stack(
+                              alignment: Alignment.center,
+                              children: [
+                                Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    if (preset.assetPath != null)
+                                      ClipRRect(
+                                        borderRadius: BorderRadius.circular(10),
+                                        child: Image.asset(
                                           preset.assetPath!,
+                                          width: 44,
+                                          height: 44,
                                           fit: BoxFit.contain,
-                                          errorBuilder: (_, _, _) => Center(
-                                            child: Text(
-                                              preset.emoji,
-                                              style: TextStyle(
-                                                fontSize: emojiSize,
-                                              ),
-                                            ),
-                                          ),
-                                        )
-                                      : Center(
-                                          child: Text(
+                                          errorBuilder: (_, _, _) => Text(
                                             preset.emoji,
-                                            style: TextStyle(
-                                              fontSize: emojiSize,
-                                            ),
+                                            style: const TextStyle(fontSize: 34),
                                           ),
                                         ),
+                                      )
+                                    else
+                                      Container(
+                                        width: 44,
+                                        height: 44,
+                                        decoration: BoxDecoration(
+                                          shape: BoxShape.circle,
+                                          color: preset.color.withValues(alpha: 0.2),
+                                        ),
+                                        child: Center(
+                                          child: Text(
+                                            preset.emoji,
+                                            style: const TextStyle(fontSize: 26),
+                                          ),
+                                        ),
+                                      ),
+                                    const SizedBox(height: 6),
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                                      child: Text(
+                                        preset.name,
+                                        style: TextStyle(
+                                          fontSize: 11.5,
+                                          fontWeight: selected
+                                              ? FontWeight.w800
+                                              : FontWeight.w600,
+                                          color: selected
+                                              ? AppTheme.gold
+                                              : AppTheme.textPrimary,
+                                        ),
+                                        textAlign: TextAlign.center,
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                              ),
+                                if (selected)
+                                  Positioned(
+                                    top: 6,
+                                    right: 6,
+                                    child: Container(
+                                      padding: const EdgeInsets.all(2),
+                                      decoration: const BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        color: AppTheme.gold,
+                                      ),
+                                      child: const Icon(
+                                        Icons.check,
+                                        size: 12,
+                                        color: Colors.black,
+                                      ),
+                                    ),
+                                  ),
+                              ],
                             ),
-                            Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 4),
-                              child: Text(
-                                preset.name,
-                                style: TextStyle(
-                                  fontSize: (side * 0.12).clamp(9.0, 11.0),
-                                  height: 1.1,
-                                ),
-                                textAlign: TextAlign.center,
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                          ],
-                        ),
-                      );
-                    },
-                  ),
-                );
-              },
-            ),
-            const SizedBox(height: 32),
-            Text(
-              'Or Upload Photo',
-              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                    fontSize: 20,
-                  ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              kIsWeb
-                  ? 'Photos stay in this browser only (not uploaded to a server).'
-                  : 'Photos stay on your device only.',
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: () => _pickImage(ImageSource.gallery),
-                    icon: const Icon(Icons.photo_library),
-                    label: Text(kIsWeb ? 'Choose Photo' : 'Gallery'),
-                  ),
-                ),
-                if (!kIsWeb) ...[
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: () => _pickImage(ImageSource.camera),
-                      icon: const Icon(Icons.camera_alt),
-                      label: const Text('Camera'),
+                          ),
+                        );
+                      },
                     ),
-                  ),
-                ],
-              ],
-            ),
-            if (_pickError != null) ...[
-              const SizedBox(height: 12),
-              Text(
-                _pickError!,
-                style: TextStyle(color: Colors.red.shade300, fontSize: 13),
-              ),
-            ],
-            if (_imageBytes != null) ...[
-              const SizedBox(height: 16),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(16),
-                child: Image.memory(
-                  _imageBytes!,
-                  height: 120,
-                  width: 120,
-                  fit: BoxFit.cover,
+                    const SizedBox(height: 32),
+                    Text(
+                      'Or Custom Photo',
+                      style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                            fontSize: 19,
+                          ),
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: () => _pickImage(ImageSource.gallery),
+                            icon: const Icon(Icons.photo_library),
+                            label: Text(kIsWeb ? 'Choose Photo' : 'Gallery'),
+                          ),
+                        ),
+                        if (!kIsWeb) ...[
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed: () => _pickImage(ImageSource.camera),
+                              icon: const Icon(Icons.camera_alt),
+                              label: const Text('Camera'),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                    if (_pickError != null) ...[
+                      const SizedBox(height: 12),
+                      Text(
+                        _pickError!,
+                        style: TextStyle(color: Colors.red.shade300, fontSize: 13),
+                      ),
+                    ],
+                    if (_imageBytes != null) ...[
+                      const SizedBox(height: 16),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(16),
+                        child: Image.memory(
+                          _imageBytes!,
+                          height: 120,
+                          width: 120,
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: 32),
+                    ShineButton(
+                      label: _saving ? 'Saving...' : 'Start Venting',
+                      icon: Icons.auto_awesome,
+                      onPressed: _saving ? null : _save,
+                    ),
+                  ],
                 ),
               ),
-            ],
-            const SizedBox(height: 32),
-            ShineButton(
-              label: _saving ? 'Saving...' : 'Start Venting',
-              icon: Icons.auto_awesome,
-              onPressed: _saving ? null : _save,
             ),
-          ],
-        ),
           ),
         ),
       ),

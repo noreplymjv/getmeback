@@ -15,3 +15,5 @@ Future<void> writeBytes(String dest, Uint8List bytes) async {}
 Future<String> appDocumentsPath() async => '';
 
 Future<void> ensureDir(String path) async {}
+
+Future<void> deleteFileIfExists(String path) async {}

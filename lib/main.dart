@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 
 import 'router.dart';
+import 'services/storage_service.dart';
 import 'services/vent_sfx.dart';
 import 'theme/app_theme.dart';
 
-void main() {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await StorageService.instance.loadSettings();
   VentSfx.instance.init();
   runApp(const GetMeBackApp());
 }

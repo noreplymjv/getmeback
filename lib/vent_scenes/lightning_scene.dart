@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../models/vent_target.dart';
+import '../../widgets/base_vent_scene.dart';
 import '../../widgets/dramatic_fx.dart';
 import '../../widgets/scene_scale.dart';
 import '../../widgets/target_avatar.dart';
@@ -18,31 +19,16 @@ class LightningScene extends StatefulWidget {
   State<LightningScene> createState() => _LightningSceneState();
 }
 
-class _LightningSceneState extends State<LightningScene> {
-  late final DramaticFxController _fx = DramaticFxController();
+class _LightningSceneState extends BaseVentSceneState<LightningScene> {
   int _zaps = 0;
   bool _zapping = false;
   final _random = Random();
   Offset _center = Offset.zero;
 
-  @override
-  void initState() {
-    super.initState();
-    _fx.addListener(() {
-      if (mounted) setState(() {});
-    });
-  }
-
-  @override
-  void dispose() {
-    _fx.dispose();
-    super.dispose();
-  }
-
   Future<void> _zap() async {
     if (_zapping || _zaps >= 4) return;
     setState(() => _zapping = true);
-    _fx.electricBurst(at: _center);
+    fx.electricBurst(at: _center);
     for (var i = 0; i < 6; i++) {
       await Future.delayed(Duration(milliseconds: 60 + _random.nextInt(80)));
       if (!mounted) return;
@@ -54,9 +40,9 @@ class _LightningSceneState extends State<LightningScene> {
       _zapping = false;
     });
     if (_zaps >= 4) {
-      _fx.megaImpact(at: _center, color: Colors.yellowAccent);
-      _fx.crackerBurst(at: _center, volleys: 5);
-      _fx.glitterRain(at: _center, count: 48);
+      fx.megaImpact(at: _center, color: Colors.yellowAccent);
+      fx.crackerBurst(at: _center, volleys: 5);
+      fx.glitterRain(at: _center, count: 48);
       await Future.delayed(const Duration(milliseconds: 900));
       if (mounted) context.go('/calm/${widget.target.id}');
     }
@@ -65,7 +51,7 @@ class _LightningSceneState extends State<LightningScene> {
   @override
   Widget build(BuildContext context) {
     return DramaticFxTicker(
-      controller: _fx,
+      controller: fx,
       child: VentSceneShell(
         target: widget.target,
         title: 'Lightning Zap',
@@ -80,7 +66,7 @@ class _LightningSceneState extends State<LightningScene> {
             final avatarSize = scale.avatar(0.32);
             _center = Offset(area.width / 2, area.height * 0.5);
             return ventFxLayer(
-              fx: _fx,
+              fx: fx,
               child: GestureDetector(
                 onTap: _zap,
                 child: Stack(

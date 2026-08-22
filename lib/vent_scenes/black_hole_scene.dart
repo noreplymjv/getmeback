@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../models/vent_target.dart';
 import '../../services/vent_sfx.dart';
+import '../../widgets/base_vent_scene.dart';
 import '../../widgets/dramatic_fx.dart';
 import '../../widgets/scene_scale.dart';
 import '../../widgets/target_avatar.dart';
@@ -17,9 +18,7 @@ class BlackHoleScene extends StatefulWidget {
   State<BlackHoleScene> createState() => _BlackHoleSceneState();
 }
 
-class _BlackHoleSceneState extends State<BlackHoleScene>
-    with SingleTickerProviderStateMixin {
-  late final DramaticFxController _fx = DramaticFxController();
+class _BlackHoleSceneState extends BaseVentSceneState<BlackHoleScene> {
   late AnimationController _pulse;
   int _feeds = 0;
   bool _gone = false;
@@ -31,14 +30,10 @@ class _BlackHoleSceneState extends State<BlackHoleScene>
       vsync: this,
       duration: const Duration(milliseconds: 700),
     )..repeat(reverse: true);
-    _fx.addListener(() {
-      if (mounted) setState(() {});
-    });
   }
 
   @override
   void dispose() {
-    _fx.dispose();
     _pulse.dispose();
     super.dispose();
   }
@@ -47,10 +42,10 @@ class _BlackHoleSceneState extends State<BlackHoleScene>
     if (_gone) return;
     setState(() => _feeds++);
     VentSfx.instance.play(Sfx.suck);
-    _fx.swirlBurst(at: center, count: 24, color: const Color(0xFF7E57C2));
+    fx.swirlBurst(at: center, count: 24, color: const Color(0xFF7E57C2));
     if (_feeds >= 5) {
       setState(() => _gone = true);
-      _fx.megaImpact(at: center, color: const Color(0xFF7E57C2));
+      fx.megaImpact(at: center, color: const Color(0xFF7E57C2));
       Future.delayed(const Duration(milliseconds: 850), () {
         if (mounted) context.go('/calm/${widget.target.id}');
       });
@@ -60,7 +55,7 @@ class _BlackHoleSceneState extends State<BlackHoleScene>
   @override
   Widget build(BuildContext context) {
     return DramaticFxTicker(
-      controller: _fx,
+      controller: fx,
       child: VentSceneShell(
         target: widget.target,
         title: 'Black Hole',
@@ -78,7 +73,7 @@ class _BlackHoleSceneState extends State<BlackHoleScene>
             return GestureDetector(
               onTap: () => _feed(center),
               child: ventFxLayer(
-                fx: _fx,
+                fx: fx,
                 child: Center(
                   child: AnimatedBuilder(
                     animation: _pulse,

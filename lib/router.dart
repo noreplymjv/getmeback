@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import 'models/room_setup.dart';
 import 'models/vent_action.dart';
 import 'models/vent_target.dart';
 import 'screens/calm_outro_screen.dart';
+import 'screens/characters_screen.dart';
 import 'screens/create_character_screen.dart';
+import 'screens/demo_mode_screen.dart';
 import 'screens/home_screen.dart';
+import 'screens/room_picker_screen.dart';
 import 'screens/vent_menu_screen.dart';
 import 'services/storage_service.dart';
 import 'vent_scenes/anvil_drop_scene.dart';
@@ -21,6 +25,7 @@ import 'vent_scenes/lightning_scene.dart';
 import 'vent_scenes/paint_bomb_scene.dart';
 import 'vent_scenes/pinata_scene.dart';
 import 'vent_scenes/punch_bag_scene.dart';
+import 'vent_scenes/room_rampage_scene.dart';
 import 'vent_scenes/shredder_scene.dart';
 import 'vent_scenes/sink_scene.dart';
 import 'vent_scenes/sledgehammer_scene.dart';
@@ -64,6 +69,21 @@ final GoRouter appRouter = GoRouter(
           _fadeSlide(state, const HomeScreen()),
     ),
     GoRoute(
+      path: '/characters',
+      pageBuilder: (context, state) =>
+          _fadeSlide(state, const CharactersScreen()),
+    ),
+    GoRoute(
+      path: '/rooms',
+      pageBuilder: (context, state) =>
+          _fadeSlide(state, const RoomPickerScreen()),
+    ),
+    GoRoute(
+      path: '/demo',
+      pageBuilder: (context, state) =>
+          _fadeSlide(state, const DemoModeScreen()),
+    ),
+    GoRoute(
       path: '/create',
       pageBuilder: (context, state) =>
           _fadeSlide(state, const CreateCharacterScreen()),
@@ -93,6 +113,17 @@ final GoRouter appRouter = GoRouter(
             actionName: actionName,
             targetId: targetId,
           ),
+        );
+      },
+    ),
+    GoRoute(
+      path: '/room-rampage/:targetId/:roomId',
+      pageBuilder: (context, state) {
+        final targetId = state.pathParameters['targetId']!;
+        final roomId = state.pathParameters['roomId']!;
+        return _fadeSlide(
+          state,
+          _RoomRampageLoader(targetId: targetId, roomId: roomId),
         );
       },
     ),
@@ -170,7 +201,65 @@ class _VentSceneLoaderState extends State<_VentSceneLoader> {
       VentActionType.blackHole => BlackHoleScene(target: target),
       VentActionType.boxingKo => BoxingKoScene(target: target),
       VentActionType.volcano => VolcanoScene(target: target),
+      VentActionType.roomRampage => RoomPickerScreen(targetId: target.id),
     };
+  }
+}
+
+class _RoomRampageLoader extends StatefulWidget {
+  const _RoomRampageLoader({
+    required this.targetId,
+    required this.roomId,
+  });
+
+  final String targetId;
+  final String roomId;
+
+  @override
+  State<_RoomRampageLoader> createState() => _RoomRampageLoaderState();
+}
+
+class _RoomRampageLoaderState extends State<_RoomRampageLoader> {
+  VentTarget? _target;
+  RoomSetup? _room;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    final room = RoomSetup.findById(widget.roomId);
+    VentTarget? target;
+    if (widget.targetId == 'room_guest') {
+      target = roomGuestTarget;
+    } else {
+      final targets = await StorageService.instance.loadTargets();
+      target = targets.where((t) => t.id == widget.targetId).firstOrNull;
+    }
+    if (mounted) {
+      setState(() {
+        _target = target;
+        _room = room;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_target == null && _room == null) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+    if (_target == null || _room == null) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Room Rampage')),
+        body: const Center(child: Text('Room or target not found')),
+      );
+    }
+    return RoomRampageScene(target: _target!, room: _room!);
   }
 }
 

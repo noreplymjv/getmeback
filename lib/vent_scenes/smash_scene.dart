@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../models/vent_target.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/base_vent_scene.dart';
 import '../../widgets/dramatic_fx.dart';
 import '../../widgets/scene_scale.dart';
 import '../../widgets/target_avatar.dart';
@@ -19,12 +20,10 @@ class SmashScene extends StatefulWidget {
   State<SmashScene> createState() => _SmashSceneState();
 }
 
-class _SmashSceneState extends State<SmashScene>
-    with TickerProviderStateMixin {
+class _SmashSceneState extends BaseVentSceneState<SmashScene> {
   int _hits = 0;
   int _cracks = 0;
   double _scale = 1;
-  late final DramaticFxController _fx = DramaticFxController();
   late AnimationController _punchController;
   Offset? _lastHit;
 
@@ -35,14 +34,10 @@ class _SmashSceneState extends State<SmashScene>
       vsync: this,
       duration: const Duration(milliseconds: 120),
     );
-    _fx.addListener(() {
-      if (mounted) setState(() {});
-    });
   }
 
   @override
   void dispose() {
-    _fx.dispose();
     _punchController.dispose();
     super.dispose();
   }
@@ -61,9 +56,9 @@ class _SmashSceneState extends State<SmashScene>
 
     final intensity = (0.9 + (_hits / 10) * 1.0).clamp(0.9, 2.0);
     if (_hits % 4 == 0) {
-      _fx.megaImpact(at: _lastHit!, color: AppTheme.accent);
+      fx.megaImpact(at: _lastHit!, color: AppTheme.accent);
     } else {
-      _fx.impact(
+      fx.impact(
         at: _lastHit!,
         count: 32 + _hits * 3,
         intensity: intensity,
@@ -72,10 +67,10 @@ class _SmashSceneState extends State<SmashScene>
     }
 
     if (_hits >= 10) {
-      _fx.megaImpact(at: center, color: AppTheme.accent);
-      _fx.confettiBurst(at: center, count: 80);
-      _fx.crackerBurst(at: center, volleys: 5);
-      _fx.glitterRain(at: center, count: 55);
+      fx.megaImpact(at: center, color: AppTheme.accent);
+      fx.confettiBurst(at: center, count: 80);
+      fx.crackerBurst(at: center, volleys: 5);
+      fx.glitterRain(at: center, count: 55);
       Future.delayed(const Duration(milliseconds: 900), () {
         if (mounted) context.go('/calm/${widget.target.id}');
       });
@@ -85,7 +80,7 @@ class _SmashSceneState extends State<SmashScene>
   @override
   Widget build(BuildContext context) {
     return DramaticFxTicker(
-      controller: _fx,
+      controller: fx,
       child: VentSceneShell(
         target: widget.target,
         title: 'Smash Face',
@@ -107,7 +102,7 @@ class _SmashSceneState extends State<SmashScene>
                 }
               },
               child: ventFxLayer(
-                fx: _fx,
+                fx: fx,
                 child: Center(
                   child: AnimatedScale(
                     scale: _scale,

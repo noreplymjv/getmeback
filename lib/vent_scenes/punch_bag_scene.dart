@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../models/vent_target.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/base_vent_scene.dart';
 import '../../widgets/dramatic_fx.dart';
 import '../../widgets/scene_scale.dart';
 import '../../widgets/target_avatar.dart';
@@ -19,11 +20,9 @@ class PunchBagScene extends StatefulWidget {
   State<PunchBagScene> createState() => _PunchBagSceneState();
 }
 
-class _PunchBagSceneState extends State<PunchBagScene>
-    with SingleTickerProviderStateMixin {
+class _PunchBagSceneState extends BaseVentSceneState<PunchBagScene> {
   int _punches = 0;
   late AnimationController _swingController;
-  late final DramaticFxController _fx = DramaticFxController();
 
   @override
   void initState() {
@@ -32,14 +31,10 @@ class _PunchBagSceneState extends State<PunchBagScene>
       vsync: this,
       duration: const Duration(milliseconds: 600),
     );
-    _fx.addListener(() {
-      if (mounted) setState(() {});
-    });
   }
 
   @override
   void dispose() {
-    _fx.dispose();
     _swingController.dispose();
     super.dispose();
   }
@@ -50,7 +45,7 @@ class _PunchBagSceneState extends State<PunchBagScene>
 
     final bagCenter = Offset(area.width / 2, area.height * 0.55);
     final intensity = (0.85 + (_punches / 10) * 0.75).clamp(0.85, 1.5);
-    _fx.impact(
+    fx.impact(
       at: bagCenter,
       count: 22 + _punches * 3,
       intensity: intensity,
@@ -58,9 +53,9 @@ class _PunchBagSceneState extends State<PunchBagScene>
     );
 
     if (_punches >= 10) {
-      _fx.confettiBurst(at: bagCenter, count: 60);
-      _fx.crackerBurst(at: bagCenter, volleys: 4);
-      _fx.glitterRain(at: bagCenter, count: 40);
+      fx.confettiBurst(at: bagCenter, count: 60);
+      fx.crackerBurst(at: bagCenter, volleys: 4);
+      fx.glitterRain(at: bagCenter, count: 40);
       Future.delayed(const Duration(milliseconds: 800), () {
         if (mounted) context.go('/calm/${widget.target.id}');
       });
@@ -70,7 +65,7 @@ class _PunchBagSceneState extends State<PunchBagScene>
   @override
   Widget build(BuildContext context) {
     return DramaticFxTicker(
-      controller: _fx,
+      controller: fx,
       child: VentSceneShell(
         target: widget.target,
         title: 'Punch Bag',
@@ -84,7 +79,7 @@ class _PunchBagSceneState extends State<PunchBagScene>
             return GestureDetector(
               onTap: () => _punch(area),
               child: ventFxLayer(
-                fx: _fx,
+                fx: fx,
                 child: AnimatedBuilder(
                   animation: _swingController,
                   builder: (context, child) {

@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../models/vent_target.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/base_vent_scene.dart';
 import '../../widgets/dramatic_fx.dart';
 import '../../widgets/scene_scale.dart';
 import '../../widgets/target_avatar.dart';
@@ -19,12 +20,10 @@ class BlenderScene extends StatefulWidget {
   State<BlenderScene> createState() => _BlenderSceneState();
 }
 
-class _BlenderSceneState extends State<BlenderScene>
-    with TickerProviderStateMixin {
+class _BlenderSceneState extends BaseVentSceneState<BlenderScene> {
   bool _blending = false;
   double _blendProgress = 0;
   late AnimationController _spinController;
-  late final DramaticFxController _fx = DramaticFxController();
 
   @override
   void initState() {
@@ -33,14 +32,10 @@ class _BlenderSceneState extends State<BlenderScene>
       vsync: this,
       duration: const Duration(milliseconds: 280),
     )..repeat();
-    _fx.addListener(() {
-      if (mounted) setState(() {});
-    });
   }
 
   @override
   void dispose() {
-    _fx.dispose();
     _spinController.dispose();
     super.dispose();
   }
@@ -49,7 +44,7 @@ class _BlenderSceneState extends State<BlenderScene>
     if (_blending) return;
     setState(() => _blending = true);
     final center = Offset(area.width / 2, area.height * 0.62);
-    _fx.impact(at: center, count: 40, intensity: 1.4, color: AppTheme.accentSecondary);
+    fx.impact(at: center, count: 40, intensity: 1.4, color: AppTheme.accentSecondary);
     _animateBlend(center);
   }
 
@@ -59,7 +54,7 @@ class _BlenderSceneState extends State<BlenderScene>
       if (!mounted) return;
       setState(() => _blendProgress = i / 28);
       if (i % 2 == 0) {
-        _fx.swirlBurst(
+        fx.swirlBurst(
           at: center.translate(
             (Random().nextDouble() - 0.5) * 40,
             (Random().nextDouble() - 0.5) * 30,
@@ -73,7 +68,7 @@ class _BlenderSceneState extends State<BlenderScene>
         );
       }
     }
-    _fx.confettiBurst(at: center, count: 50);
+    fx.confettiBurst(at: center, count: 50);
     await Future.delayed(const Duration(milliseconds: 500));
     if (mounted) context.go('/calm/${widget.target.id}');
   }
@@ -81,7 +76,7 @@ class _BlenderSceneState extends State<BlenderScene>
   @override
   Widget build(BuildContext context) {
     return DramaticFxTicker(
-      controller: _fx,
+      controller: fx,
       child: VentSceneShell(
         target: widget.target,
         title: 'Juice Blender',
@@ -96,7 +91,7 @@ class _BlenderSceneState extends State<BlenderScene>
             final jarWidth = scale.container(0.4);
             final avatarSize = scale.avatar(0.24);
             return ventFxLayer(
-              fx: _fx,
+              fx: fx,
               child: Stack(
                 alignment: Alignment.center,
                 children: [

@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../models/vent_target.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/base_vent_scene.dart';
 import '../../widgets/dramatic_fx.dart';
 import '../../widgets/scene_scale.dart';
 import '../../widgets/target_avatar.dart';
@@ -17,48 +18,33 @@ class SinkScene extends StatefulWidget {
   State<SinkScene> createState() => _SinkSceneState();
 }
 
-class _SinkSceneState extends State<SinkScene> {
+class _SinkSceneState extends BaseVentSceneState<SinkScene> {
   bool _sinking = false;
   double _waterLevel = 0;
-  late final DramaticFxController _fx = DramaticFxController();
   Offset _center = Offset.zero;
-
-  @override
-  void initState() {
-    super.initState();
-    _fx.addListener(() {
-      if (mounted) setState(() {});
-    });
-  }
-
-  @override
-  void dispose() {
-    _fx.dispose();
-    super.dispose();
-  }
 
   Future<void> _startSink() async {
     if (_sinking) return;
     setState(() => _sinking = true);
-    _fx.rippleBurst(at: _center, color: const Color(0xFF4FC3F7));
-    _fx.dripBurst(at: _center, count: 20);
+    fx.rippleBurst(at: _center, color: const Color(0xFF4FC3F7));
+    fx.dripBurst(at: _center, count: 20);
     for (var i = 1; i <= 30; i++) {
       await Future.delayed(const Duration(milliseconds: 60));
       if (!mounted) return;
       setState(() => _waterLevel = i / 30);
       if (i % 5 == 0) {
-        _fx.dripBurst(
+        fx.dripBurst(
           at: Offset(_center.dx, _center.dy - 40),
           count: 8,
           color: const Color(0xFF4FC3F7),
         );
-        _fx.rippleBurst(at: _center, color: const Color(0xFF4FC3F7), count: 2);
+        fx.rippleBurst(at: _center, color: const Color(0xFF4FC3F7), count: 2);
       }
     }
-    _fx.megaImpact(at: _center, color: const Color(0xFF4FC3F7));
-    _fx.comicPop(at: _center, text: 'GLUB!', color: const Color(0xFF4FC3F7));
-    _fx.crackerBurst(at: _center, volleys: 3);
-    _fx.glitterRain(at: _center, count: 36);
+    fx.megaImpact(at: _center, color: const Color(0xFF4FC3F7));
+    fx.comicPop(at: _center, text: 'GLUB!', color: const Color(0xFF4FC3F7));
+    fx.crackerBurst(at: _center, volleys: 3);
+    fx.glitterRain(at: _center, count: 36);
     if (mounted) {
       await Future.delayed(const Duration(milliseconds: 600));
       if (mounted) context.go('/calm/${widget.target.id}');
@@ -68,7 +54,7 @@ class _SinkSceneState extends State<SinkScene> {
   @override
   Widget build(BuildContext context) {
     return DramaticFxTicker(
-      controller: _fx,
+      controller: fx,
       child: VentSceneShell(
         target: widget.target,
         title: 'Sink & Drown',
@@ -86,7 +72,7 @@ class _SinkSceneState extends State<SinkScene> {
             return GestureDetector(
               onTap: _startSink,
               child: ventFxLayer(
-                fx: _fx,
+                fx: fx,
                 child: Stack(
                   alignment: Alignment.center,
                   children: [

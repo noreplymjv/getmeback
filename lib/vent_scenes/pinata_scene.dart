@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../models/vent_target.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/base_vent_scene.dart';
 import '../../widgets/dramatic_fx.dart';
 import '../../widgets/scene_scale.dart';
 import '../../widgets/target_avatar.dart';
@@ -19,12 +20,10 @@ class PinataScene extends StatefulWidget {
   State<PinataScene> createState() => _PinataSceneState();
 }
 
-class _PinataSceneState extends State<PinataScene>
-    with SingleTickerProviderStateMixin {
+class _PinataSceneState extends BaseVentSceneState<PinataScene> {
   int _hits = 0;
   bool _broken = false;
   late AnimationController _swingController;
-  late final DramaticFxController _fx = DramaticFxController();
   final _random = Random();
 
   @override
@@ -34,14 +33,10 @@ class _PinataSceneState extends State<PinataScene>
       vsync: this,
       duration: const Duration(milliseconds: 2000),
     )..repeat(reverse: true);
-    _fx.addListener(() {
-      if (mounted) setState(() {});
-    });
   }
 
   @override
   void dispose() {
-    _fx.dispose();
     _swingController.dispose();
     super.dispose();
   }
@@ -51,7 +46,7 @@ class _PinataSceneState extends State<PinataScene>
     setState(() => _hits++);
 
     final intensity = (0.75 + (_hits / 6) * 0.9).clamp(0.75, 1.5);
-    _fx.impact(
+    fx.impact(
       at: pinataCenter,
       count: 18 + _hits * 4,
       intensity: intensity,
@@ -61,9 +56,9 @@ class _PinataSceneState extends State<PinataScene>
     if (_hits >= 6) {
       setState(() => _broken = true);
       _swingController.stop();
-      _fx.confettiBurst(at: pinataCenter, count: 80);
-      _fx.crackerBurst(at: pinataCenter, volleys: 5);
-      _fx.glitterRain(at: pinataCenter, count: 55);
+      fx.confettiBurst(at: pinataCenter, count: 80);
+      fx.crackerBurst(at: pinataCenter, volleys: 5);
+      fx.glitterRain(at: pinataCenter, count: 55);
       Future.delayed(const Duration(milliseconds: 1200), () {
         if (mounted) context.go('/calm/${widget.target.id}');
       });
@@ -73,7 +68,7 @@ class _PinataSceneState extends State<PinataScene>
   @override
   Widget build(BuildContext context) {
     return DramaticFxTicker(
-      controller: _fx,
+      controller: fx,
       child: VentSceneShell(
         target: widget.target,
         title: 'Piñata',
@@ -89,7 +84,7 @@ class _PinataSceneState extends State<PinataScene>
             return GestureDetector(
               onTap: () => _hit(area),
               child: ventFxLayer(
-                fx: _fx,
+                fx: fx,
                 child: Stack(
                   alignment: Alignment.center,
                   children: [

@@ -22,6 +22,7 @@ enum VentActionType {
   blackHole,
   boxingKo,
   volcano,
+  roomRampage,
 }
 
 class VentAction {
@@ -188,6 +189,13 @@ class VentAction {
       subtitle: 'Launch them with lava',
       icon: Icons.landscape,
       color: Color(0xFFFF6E40),
+    ),
+    VentAction(
+      type: VentActionType.roomRampage,
+      title: 'Room Rampage',
+      subtitle: 'Pick a room & smash props',
+      icon: Icons.meeting_room,
+      color: Color(0xFF26A69A),
     ),
   ];
 

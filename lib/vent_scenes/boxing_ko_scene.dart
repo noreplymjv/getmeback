@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../models/vent_target.dart';
 import '../../services/vent_sfx.dart';
+import '../../widgets/base_vent_scene.dart';
 import '../../widgets/dramatic_fx.dart';
 import '../../widgets/scene_scale.dart';
 import '../../widgets/target_avatar.dart';
@@ -17,9 +18,7 @@ class BoxingKoScene extends StatefulWidget {
   State<BoxingKoScene> createState() => _BoxingKoSceneState();
 }
 
-class _BoxingKoSceneState extends State<BoxingKoScene>
-    with SingleTickerProviderStateMixin {
-  late final DramaticFxController _fx = DramaticFxController();
+class _BoxingKoSceneState extends BaseVentSceneState<BoxingKoScene> {
   late AnimationController _glove;
   int _hits = 0;
   bool _ko = false;
@@ -31,14 +30,10 @@ class _BoxingKoSceneState extends State<BoxingKoScene>
       vsync: this,
       duration: const Duration(milliseconds: 180),
     );
-    _fx.addListener(() {
-      if (mounted) setState(() {});
-    });
   }
 
   @override
   void dispose() {
-    _fx.dispose();
     _glove.dispose();
     super.dispose();
   }
@@ -50,14 +45,14 @@ class _BoxingKoSceneState extends State<BoxingKoScene>
     if (_hits >= 8) {
       setState(() => _ko = true);
       VentSfx.instance.play(Sfx.ko);
-      _fx.megaImpact(at: center);
-      _fx.confettiBurst(at: center, count: 50);
-      _fx.comicPop(at: center, text: 'K.O.!');
+      fx.megaImpact(at: center);
+      fx.confettiBurst(at: center, count: 50);
+      fx.comicPop(at: center, text: 'K.O.!');
       Future.delayed(const Duration(milliseconds: 1100), () {
         if (mounted) context.go('/calm/${widget.target.id}');
       });
     } else {
-      _fx.impact(
+      fx.impact(
         at: center,
         count: 24 + _hits * 4,
         intensity: 0.9 + _hits * 0.1,
@@ -68,7 +63,7 @@ class _BoxingKoSceneState extends State<BoxingKoScene>
   @override
   Widget build(BuildContext context) {
     return DramaticFxTicker(
-      controller: _fx,
+      controller: fx,
       child: VentSceneShell(
         target: widget.target,
         title: 'Boxing KO',
@@ -86,7 +81,7 @@ class _BoxingKoSceneState extends State<BoxingKoScene>
             return GestureDetector(
               onTap: () => _punch(center),
               child: ventFxLayer(
-                fx: _fx,
+                fx: fx,
                 child: Stack(
                   alignment: Alignment.center,
                   children: [

@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../../models/vent_target.dart';
 import '../../services/vent_sfx.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/base_vent_scene.dart';
 import '../../widgets/dramatic_fx.dart';
 import '../../widgets/scene_scale.dart';
 import '../../widgets/target_avatar.dart';
@@ -20,9 +21,7 @@ class TornadoScene extends StatefulWidget {
   State<TornadoScene> createState() => _TornadoSceneState();
 }
 
-class _TornadoSceneState extends State<TornadoScene>
-    with SingleTickerProviderStateMixin {
-  late final DramaticFxController _fx = DramaticFxController();
+class _TornadoSceneState extends BaseVentSceneState<TornadoScene> {
   late AnimationController _spin;
   int _gusts = 0;
   bool _sucked = false;
@@ -34,14 +33,10 @@ class _TornadoSceneState extends State<TornadoScene>
       vsync: this,
       duration: const Duration(milliseconds: 900),
     )..repeat();
-    _fx.addListener(() {
-      if (mounted) setState(() {});
-    });
   }
 
   @override
   void dispose() {
-    _fx.dispose();
     _spin.dispose();
     super.dispose();
   }
@@ -51,11 +46,11 @@ class _TornadoSceneState extends State<TornadoScene>
     setState(() => _gusts++);
     _spin.duration = Duration(milliseconds: (900 - _gusts * 110).clamp(180, 900));
     _spin.repeat();
-    _fx.swirlBurst(at: center, count: 28 + _gusts * 6, color: AppTheme.accentSecondary);
+    fx.swirlBurst(at: center, count: 28 + _gusts * 6, color: AppTheme.accentSecondary);
     if (_gusts >= 6) {
       setState(() => _sucked = true);
       VentSfx.instance.play(Sfx.suck);
-      _fx.megaImpact(at: center, color: AppTheme.accentSecondary);
+      fx.megaImpact(at: center, color: AppTheme.accentSecondary);
       Future.delayed(const Duration(milliseconds: 900), () {
         if (mounted) context.go('/calm/${widget.target.id}');
       });
@@ -65,7 +60,7 @@ class _TornadoSceneState extends State<TornadoScene>
   @override
   Widget build(BuildContext context) {
     return DramaticFxTicker(
-      controller: _fx,
+      controller: fx,
       child: VentSceneShell(
         target: widget.target,
         title: 'Tornado Spin',
@@ -82,7 +77,7 @@ class _TornadoSceneState extends State<TornadoScene>
             return GestureDetector(
               onTap: () => _gust(center),
               child: ventFxLayer(
-                fx: _fx,
+                fx: fx,
                 child: Center(
                   child: AnimatedBuilder(
                     animation: _spin,

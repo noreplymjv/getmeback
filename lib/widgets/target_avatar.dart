@@ -67,12 +67,17 @@ class TargetAvatar extends StatelessWidget {
           ),
           if (showLabel) ...[
             const SizedBox(height: 8),
-            Text(
-              target.name,
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
-              textAlign: TextAlign.center,
+            SizedBox(
+              width: size * 1.35,
+              child: Text(
+                target.name,
+                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
           ],
         ],

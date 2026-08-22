@@ -281,19 +281,25 @@ class _ShineButtonState extends State<ShineButton>
             ),
             if (enabled)
               IgnorePointer(
-                child: AnimatedBuilder(
-                  animation: _shine,
-                  builder: (context, _) {
-                    return Transform.translate(
-                      offset: Offset((_shine.value * 2 - 0.5) * 280, 0),
-                      child: Transform.rotate(
-                        angle: -0.5,
-                        child: Container(
-                          width: 40,
-                          height: 80,
-                          color: Colors.white.withValues(alpha: 0.18),
-                        ),
-                      ),
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final width = constraints.maxWidth;
+                    return AnimatedBuilder(
+                      animation: _shine,
+                      builder: (context, _) {
+                        final x = -60.0 + (_shine.value * (width + 120.0));
+                        return Transform.translate(
+                          offset: Offset(x, 0),
+                          child: Transform.rotate(
+                            angle: -0.5,
+                            child: Container(
+                              width: 45,
+                              height: 120,
+                              color: Colors.white.withValues(alpha: 0.22),
+                            ),
+                          ),
+                        );
+                      },
                     );
                   },
                 ),

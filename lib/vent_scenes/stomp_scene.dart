@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../models/vent_target.dart';
+import '../../widgets/base_vent_scene.dart';
 import '../../widgets/dramatic_fx.dart';
 import '../../widgets/scene_scale.dart';
 import '../../widgets/target_avatar.dart';
@@ -16,12 +17,10 @@ class StompScene extends StatefulWidget {
   State<StompScene> createState() => _StompSceneState();
 }
 
-class _StompSceneState extends State<StompScene>
-    with SingleTickerProviderStateMixin {
+class _StompSceneState extends BaseVentSceneState<StompScene> {
   int _stomps = 0;
   double _flatness = 1.0;
   late AnimationController _footController;
-  late final DramaticFxController _fx = DramaticFxController();
 
   @override
   void initState() {
@@ -30,14 +29,10 @@ class _StompSceneState extends State<StompScene>
       vsync: this,
       duration: const Duration(milliseconds: 300),
     );
-    _fx.addListener(() {
-      if (mounted) setState(() {});
-    });
   }
 
   @override
   void dispose() {
-    _fx.dispose();
     _footController.dispose();
     super.dispose();
   }
@@ -49,15 +44,15 @@ class _StompSceneState extends State<StompScene>
     });
     _footController.forward(from: 0);
     if (_stomps >= 4) {
-      _fx.megaImpact(at: center);
-      _fx.comicPop(at: center, text: 'SQUISH!');
-      _fx.crackerBurst(at: center, volleys: 2, playSound: false);
+      fx.megaImpact(at: center);
+      fx.comicPop(at: center, text: 'SQUISH!');
+      fx.crackerBurst(at: center, volleys: 2, playSound: false);
     } else {
-      _fx.impact(at: center, count: 30 + _stomps * 5, intensity: 1.1);
+      fx.impact(at: center, count: 30 + _stomps * 5, intensity: 1.1);
     }
     if (_stomps >= 6) {
-      _fx.crackerBurst(at: center, volleys: 4);
-      _fx.glitterRain(at: center, count: 40);
+      fx.crackerBurst(at: center, volleys: 4);
+      fx.glitterRain(at: center, count: 40);
       Future.delayed(const Duration(milliseconds: 900), () {
         if (mounted) context.go('/calm/${widget.target.id}');
       });
@@ -67,7 +62,7 @@ class _StompSceneState extends State<StompScene>
   @override
   Widget build(BuildContext context) {
     return DramaticFxTicker(
-      controller: _fx,
+      controller: fx,
       child: VentSceneShell(
         target: widget.target,
         title: 'Stomp',
@@ -85,7 +80,7 @@ class _StompSceneState extends State<StompScene>
             return GestureDetector(
               onTap: () => _stomp(center),
               child: ventFxLayer(
-                fx: _fx,
+                fx: fx,
                 child: Stack(
                   alignment: Alignment.center,
                   children: [
