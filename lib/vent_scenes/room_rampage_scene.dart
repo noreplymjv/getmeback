@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../models/room_hotspots.dart';
 import '../models/room_setup.dart';
 import '../models/vent_target.dart';
 import '../services/vent_sfx.dart';
@@ -281,6 +282,7 @@ class _RoomRampageSceneState extends BaseVentSceneState<RoomRampageScene> {
                       ),
                       for (final prop in room.props)
                         _SmashableProp(
+                          roomId: room.id,
                           prop: prop,
                           smashed: _smashed.contains(prop.id),
                           holding: _holdingId == prop.id,
@@ -526,7 +528,7 @@ class _CoachOverlay extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 12),
-                      _tip(Icons.flash_on, 'TAP glowing objects to smash them'),
+                      _tip(Icons.flash_on, 'Tap the pulsing pins on furniture — not empty wall'),
                       _tip(Icons.back_hand, 'Glass / cups: first tap = pick up'),
                       _tip(Icons.sports_handball,
                           'Then TAP another object to throw & react'),
@@ -575,6 +577,7 @@ class _CoachOverlay extends StatelessWidget {
 
 class _SmashableProp extends StatelessWidget {
   const _SmashableProp({
+    required this.roomId,
     required this.prop,
     required this.smashed,
     required this.holding,
@@ -584,6 +587,7 @@ class _SmashableProp extends StatelessWidget {
     required this.onTap,
   });
 
+  final String roomId;
   final RoomProp prop;
   final bool smashed;
   final bool holding;
@@ -594,10 +598,14 @@ class _SmashableProp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const hit = 88.0;
-    const ring = 58.0;
-    final dx = (prop.align.x + 1) / 2 * stage.width;
-    final dy = (prop.align.y + 1) / 2 * stage.height;
+    const hit = 72.0;
+    final norm = RoomHotspots.forProp(
+      roomId: roomId,
+      propId: prop.id,
+      fallback: prop.align,
+    );
+    final dx = norm.dx * stage.width;
+    final dy = norm.dy * stage.height;
     final center = Offset(dx, dy);
 
     final accent = holding
@@ -610,73 +618,51 @@ class _SmashableProp extends StatelessWidget {
       left: dx - hit / 2,
       top: dy - hit / 2,
       width: hit,
-      height: hit + 22,
+      height: hit + 20,
       child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
+        behavior: HitTestBehavior.translucent,
         onTap: smashed ? null : () => onTap(center),
         child: AnimatedBuilder(
           animation: pulse,
           builder: (context, _) {
             if (smashed) {
               return Opacity(
-                opacity: 0.25,
-                child: _hotspotCore(ring, accent, smashed: true),
+                opacity: 0.2,
+                child: _pin(accent, ringScale: 0.7, showLabel: false),
               );
             }
 
-            final expand = 1 + pulse.value * 0.18;
+            final ringScale = 1 + pulse.value * 0.22;
             return Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Transform.scale(
-                  scale: holding ? 1.08 : 1,
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      // Outer pulse ring — reads as “tap here on the photo”
-                      Container(
-                        width: ring * expand * 1.35,
-                        height: ring * expand * 1.35,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: accent.withValues(alpha: 0.35 + pulse.value * 0.45),
-                            width: 2.5,
-                          ),
-                        ),
-                      ),
-                      _hotspotCore(ring, accent, smashed: false),
-                      if (!smashed)
-                        Positioned(
-                          bottom: 0,
-                          child: _actionChip(
-                            holding
-                                ? 'HOLD'
-                                : throwTarget
-                                    ? 'THROW'
-                                    : prop.throwable
-                                        ? 'PICK'
-                                        : 'SMASH',
-                            accent,
-                          ),
-                        ),
-                    ],
+                  scale: holding ? 1.1 : 1,
+                  child: _pin(
+                    accent,
+                    ringScale: ringScale,
+                    action: holding
+                        ? 'HOLD'
+                        : throwTarget
+                            ? 'THROW'
+                            : prop.throwable
+                                ? 'PICK'
+                                : null,
                   ),
                 ),
-                const SizedBox(height: 6),
+                const SizedBox(height: 4),
                 Text(
                   prop.label,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 0.2,
-                    color: Colors.white,
+                    fontSize: 9,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white.withValues(alpha: 0.92),
                     shadows: [
                       Shadow(
                         color: Colors.black.withValues(alpha: 0.95),
-                        blurRadius: 8,
+                        blurRadius: 6,
                       ),
                     ],
                   ),
@@ -689,44 +675,67 @@ class _SmashableProp extends StatelessWidget {
     );
   }
 
-  Widget _hotspotCore(double ring, Color accent, {required bool smashed}) {
-    return Container(
-      width: ring,
-      height: ring,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: Colors.black.withValues(alpha: smashed ? 0.2 : 0.48),
-        border: Border.all(color: accent, width: 2.5),
-        boxShadow: [
-          BoxShadow(
-            color: accent.withValues(alpha: 0.35),
-            blurRadius: 14,
+  Widget _pin(
+    Color accent, {
+    required double ringScale,
+    String? action,
+    bool showLabel = true,
+  }) {
+    const core = 12.0;
+    const ring = 36.0;
+    return SizedBox(
+      width: ring * ringScale * 1.4,
+      height: ring * ringScale * 1.4,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Container(
+            width: ring * ringScale,
+            height: ring * ringScale,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: accent.withValues(alpha: 0.55),
+                width: 2,
+              ),
+            ),
           ),
+          Container(
+            width: core,
+            height: core,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: accent.withValues(alpha: 0.95),
+              boxShadow: [
+                BoxShadow(
+                  color: accent.withValues(alpha: 0.5),
+                  blurRadius: 8,
+                ),
+              ],
+            ),
+          ),
+          if (action != null && showLabel)
+            Positioned(
+              bottom: 0,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.65),
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(color: accent.withValues(alpha: 0.6)),
+                ),
+                child: Text(
+                  action,
+                  style: TextStyle(
+                    fontSize: 7,
+                    fontWeight: FontWeight.w900,
+                    color: accent,
+                    letterSpacing: 0.4,
+                  ),
+                ),
+              ),
+            ),
         ],
-      ),
-      child: Icon(
-        smashed ? Icons.close : prop.icon,
-        color: Colors.white,
-        size: ring * 0.42,
-      ),
-    );
-  }
-
-  Widget _actionChip(String label, Color accent) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-      decoration: BoxDecoration(
-        color: accent.withValues(alpha: 0.92),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Text(
-        label,
-        style: const TextStyle(
-          fontSize: 8,
-          fontWeight: FontWeight.w900,
-          color: Colors.black,
-          letterSpacing: 0.5,
-        ),
       ),
     );
   }
