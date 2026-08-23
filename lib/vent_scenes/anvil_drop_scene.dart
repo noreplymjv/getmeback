@@ -77,7 +77,7 @@ class _AnvilDropSceneState extends BaseVentSceneState<AnvilDropScene> {
             );
             return GestureDetector(
               onTap: () => _dropAnvil(center),
-              child: ventFxLayer(
+              child: VentFxLayer(
                 fx: fx,
                 child: Stack(
                   alignment: Alignment.center,

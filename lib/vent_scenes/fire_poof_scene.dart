@@ -99,7 +99,7 @@ class _FirePoofSceneState extends BaseVentSceneState<FirePoofScene> {
             final flameBase = scale.prop(0.12);
             return GestureDetector(
               onTap: () => _ignite(area),
-              child: ventFxLayer(
+              child: VentFxLayer(
                 fx: fx,
                 child: Center(
                   child: Stack(

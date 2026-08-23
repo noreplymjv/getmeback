@@ -78,7 +78,7 @@ class _PunchBagSceneState extends BaseVentSceneState<PunchBagScene> {
             final bagWidth = scale.container(0.4);
             return GestureDetector(
               onTap: () => _punch(area),
-              child: ventFxLayer(
+              child: VentFxLayer(
                 fx: fx,
                 child: AnimatedBuilder(
                   animation: _swingController,

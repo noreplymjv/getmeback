@@ -81,7 +81,7 @@ class _SledgehammerSceneState extends BaseVentSceneState<SledgehammerScene> {
             final scale = SceneScale(constraints);
             final avatarSize = scale.avatar(0.32);
             _center = Offset(area.width / 2, area.height * 0.5);
-            return ventFxLayer(
+            return VentFxLayer(
               fx: fx,
               child: GestureDetector(
                 onTap: _smash,

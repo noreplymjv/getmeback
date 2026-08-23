@@ -74,7 +74,7 @@ class _DartThrowSceneState extends BaseVentSceneState<DartThrowScene> {
             );
             return GestureDetector(
               onTapDown: _throwDart,
-              child: ventFxLayer(
+              child: VentFxLayer(
                 fx: fx,
                 child: Stack(
                   alignment: Alignment.center,

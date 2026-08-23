@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../services/storage_service.dart';
 import '../services/vent_sfx.dart';
 import '../theme/app_theme.dart';
 import '../widgets/dramatic_fx.dart';
+import '../widgets/micro_journal_dialog.dart';
 import '../widgets/premium_chrome.dart';
 
 class CalmOutroScreen extends StatefulWidget {
@@ -20,6 +22,7 @@ class _CalmOutroScreenState extends State<CalmOutroScreen>
   late AnimationController _breathController;
   late final DramaticFxController _fx = DramaticFxController();
   bool _inhale = true;
+  int _zenStreak = 0;
 
   @override
   void initState() {
@@ -38,6 +41,7 @@ class _CalmOutroScreenState extends State<CalmOutroScreen>
     _fx.addListener(() {
       if (mounted) setState(() {});
     });
+    _loadStreak();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       final size = MediaQuery.sizeOf(context);
@@ -46,6 +50,21 @@ class _CalmOutroScreenState extends State<CalmOutroScreen>
       _fx.crackerBurst(at: center, volleys: 5);
       _fx.glitterRain(at: center, count: 50);
     });
+  }
+
+  Future<void> _loadStreak() async {
+    final streak = await StorageService.instance.recordCalmCompletion();
+    if (mounted) setState(() => _zenStreak = streak);
+  }
+
+  Future<void> _finish() async {
+    final entry = await showMicroJournalDialog(context);
+    if (!mounted) return;
+    if (entry != null) {
+      await StorageService.instance.saveJournalEntry(entry);
+    }
+    if (!mounted) return;
+    context.go('/');
   }
 
   @override
@@ -62,7 +81,7 @@ class _CalmOutroScreenState extends State<CalmOutroScreen>
       child: Scaffold(
         body: PremiumBackdrop(
           calm: true,
-          child: ventFxLayer(
+          child: VentFxLayer(
             fx: _fx,
             child: SafeArea(
               child: Center(
@@ -72,6 +91,11 @@ class _CalmOutroScreenState extends State<CalmOutroScreen>
                     padding: const EdgeInsets.all(28),
                     child: Column(
                       children: [
+                        if (_zenStreak > 0)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 16),
+                            child: _ZenStreakBadge(streak: _zenStreak),
+                          ),
                         const Spacer(),
                         const GradientTitle('Feel better?', size: 34),
                         const SizedBox(height: 10),
@@ -141,7 +165,7 @@ class _CalmOutroScreenState extends State<CalmOutroScreen>
                           label: 'Done — Back to Home',
                           icon: Icons.home_rounded,
                           color: AppTheme.calm,
-                          onPressed: () => context.go('/'),
+                          onPressed: _finish,
                         ),
                         const SizedBox(height: 8),
                         TextButton(
@@ -162,6 +186,40 @@ class _CalmOutroScreenState extends State<CalmOutroScreen>
               ),
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ZenStreakBadge extends StatelessWidget {
+  const _ZenStreakBadge({required this.streak});
+
+  final int streak;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: AppTheme.calm.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppTheme.calm.withValues(alpha: 0.45)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.spa, color: AppTheme.calm, size: 20),
+            const SizedBox(width: 8),
+            Text(
+              'Zen streak: $streak day${streak == 1 ? '' : 's'}',
+              style: const TextStyle(
+                fontWeight: FontWeight.w800,
+                color: AppTheme.calm,
+              ),
+            ),
+          ],
         ),
       ),
     );

@@ -70,5 +70,7 @@
 	<string>GetMeBack needs camera access to let you upload a photo target for venting.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>GetMeBack needs photo library access to let you pick a photo target for venting.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>GetMeBack uses the microphone for the Tornado scream meter vent scene.</string>
 </dict>
 </plist>

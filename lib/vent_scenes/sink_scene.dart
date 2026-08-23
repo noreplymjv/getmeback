@@ -71,7 +71,7 @@ class _SinkSceneState extends BaseVentSceneState<SinkScene> {
             );
             return GestureDetector(
               onTap: _startSink,
-              child: ventFxLayer(
+              child: VentFxLayer(
                 fx: fx,
                 child: Stack(
                   alignment: Alignment.center,

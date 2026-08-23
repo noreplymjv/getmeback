@@ -61,7 +61,7 @@ class _TrashCanSceneState extends BaseVentSceneState<TrashCanScene> {
             final binWidth = scale.container(0.38);
             final avatarSize = scale.avatar(0.24);
             _center = Offset(area.width / 2, area.height * 0.5);
-            return ventFxLayer(
+            return VentFxLayer(
               fx: fx,
               child: Stack(
                 alignment: Alignment.center,

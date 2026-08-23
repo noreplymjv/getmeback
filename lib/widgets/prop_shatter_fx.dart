@@ -32,13 +32,26 @@ class PropShatterShard {
 
   double get alpha => (life / maxLife).clamp(0.0, 1.0);
 
-  void tick(double dt) {
+  void tick(double dt, {double? floorY}) {
     x += vx * dt;
     y += vy * dt;
     vy += gravity * dt;
     vx *= drag;
     vy *= drag;
     rotation += spin * dt;
+
+    if (floorY != null && y >= floorY) {
+      y = floorY;
+      if (vy.abs() > 40) {
+        vy = -vy * 0.38;
+        vx *= 0.72;
+        spin *= 0.85;
+      } else {
+        vy = 0;
+        vx *= 0.92;
+      }
+    }
+
     life -= dt;
   }
 }
@@ -48,6 +61,9 @@ class PropShatterController extends ChangeNotifier {
 
   final _rng = Random();
   final List<PropShatterShard> shards = [];
+
+  /// Stage Y coordinate for floor collision (null = no floor).
+  double? floorY;
 
   void burst({
     required Offset at,
@@ -86,7 +102,7 @@ class PropShatterController extends ChangeNotifier {
   void tick(double dt) {
     if (shards.isEmpty) return;
     for (final s in shards) {
-      s.tick(dt);
+      s.tick(dt, floorY: floorY);
     }
     final before = shards.length;
     shards.removeWhere((s) => s.life <= 0);

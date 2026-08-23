@@ -76,7 +76,7 @@ class _IceShatterSceneState extends BaseVentSceneState<IceShatterScene> {
             );
             return GestureDetector(
               onTap: () => !_frozen ? _freeze(center) : _tapIce(center),
-              child: ventFxLayer(
+              child: VentFxLayer(
                 fx: fx,
                 child: Center(
                   child: AnimatedSwitcher(

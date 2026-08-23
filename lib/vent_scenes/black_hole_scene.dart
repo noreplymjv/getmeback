@@ -72,7 +72,7 @@ class _BlackHoleSceneState extends BaseVentSceneState<BlackHoleScene> {
             final hole = avatarSize * 0.85 + _feeds * avatarSize * 0.2;
             return GestureDetector(
               onTap: () => _feed(center),
-              child: ventFxLayer(
+              child: VentFxLayer(
                 fx: fx,
                 child: Center(
                   child: AnimatedBuilder(

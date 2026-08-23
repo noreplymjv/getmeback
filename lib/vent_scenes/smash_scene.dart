@@ -101,7 +101,7 @@ class _SmashSceneState extends BaseVentSceneState<SmashScene> {
                   _onHit(d.localPosition, area);
                 }
               },
-              child: ventFxLayer(
+              child: VentFxLayer(
                 fx: fx,
                 child: Center(
                   child: AnimatedScale(

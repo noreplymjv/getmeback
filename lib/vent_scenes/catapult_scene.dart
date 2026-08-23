@@ -79,7 +79,7 @@ class _CatapultSceneState extends BaseVentSceneState<CatapultScene> {
             final scale = SceneScale(constraints);
             final rigWidth = scale.container(0.5);
             _center = Offset(area.width / 2, area.height * 0.5);
-            return ventFxLayer(
+            return VentFxLayer(
               fx: fx,
               child: GestureDetector(
                 onPanEnd: (details) {

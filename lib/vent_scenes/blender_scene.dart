@@ -90,7 +90,7 @@ class _BlenderSceneState extends BaseVentSceneState<BlenderScene> {
             final scale = SceneScale(constraints);
             final jarWidth = scale.container(0.4);
             final avatarSize = scale.avatar(0.24);
-            return ventFxLayer(
+            return VentFxLayer(
               fx: fx,
               child: Stack(
                 alignment: Alignment.center,

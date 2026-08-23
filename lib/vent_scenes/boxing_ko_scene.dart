@@ -80,7 +80,7 @@ class _BoxingKoSceneState extends BaseVentSceneState<BoxingKoScene> {
             );
             return GestureDetector(
               onTap: () => _punch(center),
-              child: ventFxLayer(
+              child: VentFxLayer(
                 fx: fx,
                 child: Stack(
                   alignment: Alignment.center,

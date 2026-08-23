@@ -57,10 +57,20 @@ class InteractiveRoomProp extends StatelessWidget {
       top: center.dy - hitH / 2,
       width: hitW,
       height: hitH + (spriteMode ? 0 : 18),
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: () => onTap(center),
-        child: spriteMode
+      child: Semantics(
+        button: true,
+        enabled: !smashed,
+        label: smashed ? null : '${prop.label}, smashable object in room',
+        hint: holding
+            ? 'Selected — tap another object to throw'
+            : throwTarget
+                ? 'Throw target'
+                : 'Tap to smash',
+        onTap: smashed ? null : () => onTap(center),
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: () => onTap(center),
+          child: spriteMode
             ? _SpriteProp(
                 prop: prop,
                 roomId: roomId,
@@ -77,6 +87,7 @@ class InteractiveRoomProp extends StatelessWidget {
                 throwTarget: throwTarget,
                 accent: accent,
               ),
+        ),
       ),
     );
   }

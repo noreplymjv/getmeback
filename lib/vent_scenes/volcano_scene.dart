@@ -73,7 +73,7 @@ class _VolcanoSceneState extends BaseVentSceneState<VolcanoScene> {
             );
             return GestureDetector(
               onTap: () => _stoke(center),
-              child: ventFxLayer(
+              child: VentFxLayer(
                 fx: fx,
                 child: AnimatedBuilder(
                   animation: _rumble,

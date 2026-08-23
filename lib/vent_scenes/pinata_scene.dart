@@ -83,7 +83,7 @@ class _PinataSceneState extends BaseVentSceneState<PinataScene> {
             final potWidth = scale.container(0.4);
             return GestureDetector(
               onTap: () => _hit(area),
-              child: ventFxLayer(
+              child: VentFxLayer(
                 fx: fx,
                 child: Stack(
                   alignment: Alignment.center,

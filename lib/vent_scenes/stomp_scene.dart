@@ -79,7 +79,7 @@ class _StompSceneState extends BaseVentSceneState<StompScene> {
             );
             return GestureDetector(
               onTap: () => _stomp(center),
-              child: ventFxLayer(
+              child: VentFxLayer(
                 fx: fx,
                 child: Stack(
                   alignment: Alignment.center,

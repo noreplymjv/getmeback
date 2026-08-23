@@ -92,7 +92,7 @@ class _ShredderSceneState extends BaseVentSceneState<ShredderScene> {
               constraints.maxWidth / 2,
               constraints.maxHeight * 0.35,
             );
-            return ventFxLayer(
+            return VentFxLayer(
               fx: fx,
               child: Stack(
                 alignment: Alignment.center,

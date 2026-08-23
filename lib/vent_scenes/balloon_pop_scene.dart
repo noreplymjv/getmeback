@@ -52,7 +52,7 @@ class _BalloonPopSceneState extends BaseVentSceneState<BalloonPopScene> {
             );
             return GestureDetector(
               onTap: () => _pop(center),
-              child: ventFxLayer(
+              child: VentFxLayer(
                 fx: fx,
                 child: Center(
                   child: AnimatedScale(

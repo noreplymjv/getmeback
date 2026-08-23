@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
@@ -6,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import '../models/prop_state.dart';
 import '../models/room_setup.dart';
 import '../models/vent_target.dart';
+import '../services/sensor_service.dart';
 import '../services/vent_sfx.dart';
 import '../theme/app_theme.dart';
 import '../widgets/base_vent_scene.dart';
@@ -38,6 +40,8 @@ class _RoomRampageSceneState extends BaseVentSceneState<RoomRampageScene> {
   late final PropShatterController _shatter;
   final List<DestructionScar> _scars = [];
   final _rng = Random();
+  StreamSubscription<void>? _shakeSub;
+  Offset _parallax = Offset.zero;
 
   int get _total => widget.room.props.length;
   int get _done => _smashed.length;
@@ -59,9 +63,29 @@ class _RoomRampageSceneState extends BaseVentSceneState<RoomRampageScene> {
       vsync: this,
       duration: const Duration(milliseconds: 1100),
     )..repeat(reverse: true);
+    _pulse.addListener(() {
+      final p = SensorService.instance.parallax;
+      if (p != _parallax && mounted) {
+        setState(() => _parallax = p);
+      }
+    });
     _setBanner(
       'Tap the objects in the room to smash them',
     );
+    SensorService.instance.start();
+    _shakeSub = SensorService.instance.onShake.listen((_) => _earthquake());
+  }
+
+  void _earthquake() {
+    if (!mounted || _cleared) return;
+    final size = MediaQuery.sizeOf(context);
+    final center = Offset(size.width / 2, size.height * 0.55);
+    fx.triggerHitStop(const Duration(milliseconds: 50));
+    fx.shakeBurst(amp: 26, duration: 0.45);
+    fx.megaImpact(at: center, color: AppTheme.gold);
+    fx.debrisRain(at: center, count: 30, color: const Color(0xFF8D6E63));
+    VentSfx.heavy();
+    _setBanner('EARTHQUAKE! Everything shook!');
   }
 
   void _onShatterTick() {
@@ -70,6 +94,8 @@ class _RoomRampageSceneState extends BaseVentSceneState<RoomRampageScene> {
 
   @override
   void dispose() {
+    _shakeSub?.cancel();
+    SensorService.instance.stop();
     _shatter.removeListener(_onShatterTick);
     _shatter.dispose();
     _pulse.dispose();
@@ -286,6 +312,8 @@ class _RoomRampageSceneState extends BaseVentSceneState<RoomRampageScene> {
           child: LayoutBuilder(
             builder: (context, constraints) {
               final size = Size(constraints.maxWidth, constraints.maxHeight);
+              _shatter.floorY = size.height * 0.92;
+              _parallax = SensorService.instance.parallax;
               final props = List<RoomProp>.from(room.props)
                 ..sort((a, b) => a.effectiveZIndex.compareTo(b.effectiveZIndex));
               return Stack(
@@ -293,15 +321,18 @@ class _RoomRampageSceneState extends BaseVentSceneState<RoomRampageScene> {
                 children: [
                   // Full-bleed room art (clean base when sprite mode)
                   Positioned.fill(
-                    child: Image.asset(
-                      room.resolvedBaseAsset,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, _, _) => DecoratedBox(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                            colors: room.gradient,
+                    child: Transform.translate(
+                      offset: _parallax,
+                      child: Image.asset(
+                        room.resolvedBaseAsset,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, _, _) => DecoratedBox(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                              colors: room.gradient,
+                            ),
                           ),
                         ),
                       ),
@@ -334,7 +365,7 @@ class _RoomRampageSceneState extends BaseVentSceneState<RoomRampageScene> {
                     child: const SizedBox.expand(),
                   ),
                 ),
-                    ventFxLayer(
+                    VentFxLayer(
                   fx: fx,
                   child: propShatterLayer(
                     shatter: _shatter,

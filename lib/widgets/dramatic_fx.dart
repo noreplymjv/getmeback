@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 
 import '../services/vent_sfx.dart';
+import '../utils/perlin_noise.dart';
 
 /// Shared dramatic VFX: particles, shockwaves, comic pops, shake, flash.
 class DramaticFxOverlay extends StatelessWidget {
@@ -259,6 +260,25 @@ class DramaticFxController extends ChangeNotifier {
   Offset shake = Offset.zero;
   double _shakeT = 0;
   double _shakeAmp = 0;
+  double _shakeDuration = 0.28;
+  double _hitStopRemaining = 0;
+  final _shakeNoise = PerlinNoise1D(7);
+  double _shakeNoiseT = 0;
+
+  bool get isHitStopped => _hitStopRemaining > 0;
+
+  /// Brief frame freeze on heavy impacts (30–50 ms).
+  void triggerHitStop([Duration duration = const Duration(milliseconds: 40)]) {
+    _hitStopRemaining = max(_hitStopRemaining, duration.inMicroseconds / 1e6);
+  }
+
+  /// Camera shake without spawning particles/SFX (earthquake, tests).
+  void shakeBurst({double amp = 18, double duration = 0.28}) {
+    _shakeAmp = max(_shakeAmp, amp);
+    _shakeDuration = max(_shakeDuration, duration);
+    _shakeT = max(_shakeT, duration);
+    notifyListeners();
+  }
 
   static const _comicWords = [
     'POW!',
@@ -294,7 +314,9 @@ class DramaticFxController extends ChangeNotifier {
     flash = (0.65 * intensity).clamp(0.0, 1.0);
     vignette = (0.35 * intensity).clamp(0.0, 0.6);
     _shakeAmp = 18 * intensity;
-    _shakeT = 0.28;
+    _shakeDuration = 0.28;
+    _shakeT = _shakeDuration;
+    if (intensity >= 1.2) triggerHitStop();
 
     _spawnParticles(at, count, color, intensity);
     if (intensity > 0.7) _crackBurst(at, color, (count / 36).clamp(0.5, 2.0));
@@ -318,7 +340,9 @@ class DramaticFxController extends ChangeNotifier {
     flash = 1.0;
     vignette = 0.55;
     _shakeAmp = 28;
-    _shakeT = 0.4;
+    _shakeDuration = 0.4;
+    _shakeT = _shakeDuration;
+    triggerHitStop(const Duration(milliseconds: 45));
     _spawnParticles(at, 80, color, 1.9);
     _spawnParticles(at, 48, Colors.white, 1.3);
     _crackBurst(at, color, 2.2);
@@ -358,7 +382,8 @@ class DramaticFxController extends ChangeNotifier {
     VentSfx.instance.play(Sfx.confetti);
     flash = 0.55;
     _shakeAmp = 16;
-    _shakeT = 0.26;
+    _shakeDuration = 0.26;
+    _shakeT = _shakeDuration;
     _addRing(at, const Color(0xFFFFD54F), 1.0);
     final colors = [
       const Color(0xFFFF4D6D),
@@ -403,7 +428,8 @@ class DramaticFxController extends ChangeNotifier {
     }
     flash = max(flash, 0.6);
     _shakeAmp = max(_shakeAmp, 18);
-    _shakeT = max(_shakeT, 0.28);
+    _shakeDuration = max(_shakeDuration, 0.28);
+    _shakeT = max(_shakeT, _shakeDuration);
     final palette = [
       const Color(0xFFFFD166),
       const Color(0xFFFF4D6D),
@@ -542,7 +568,8 @@ class DramaticFxController extends ChangeNotifier {
     flash = 0.7;
     vignette = 0.35;
     _shakeAmp = 16;
-    _shakeT = 0.2;
+    _shakeDuration = 0.2;
+    _shakeT = _shakeDuration;
     comicPop(at: at, text: 'WHOOSH!', color: const Color(0xFFFF7043));
     _addRing(at, const Color(0xFFFF7043), 1.1);
     smokeBurst(at: at, count: 8, color: Colors.grey.shade800);
@@ -634,7 +661,8 @@ class DramaticFxController extends ChangeNotifier {
     flash = 0.85;
     vignette = 0.4;
     _shakeAmp = 22;
-    _shakeT = 0.25;
+    _shakeDuration = 0.25;
+    _shakeT = _shakeDuration;
     comicPop(at: at, text: 'ZAP!', color: Colors.yellowAccent);
     for (var i = 0; i < count; i++) {
       final angle = _rng.nextDouble() * pi * 2;
@@ -707,6 +735,12 @@ class DramaticFxController extends ChangeNotifier {
   }
 
   void tick(double dt) {
+    if (_hitStopRemaining > 0) {
+      _hitStopRemaining -= dt;
+      if (_hitStopRemaining < 0) _hitStopRemaining = 0;
+      return;
+    }
+
     var changed = false;
     if (flash > 0) {
       flash = (flash - dt * 4.0).clamp(0.0, 1.0);
@@ -718,10 +752,12 @@ class DramaticFxController extends ChangeNotifier {
     }
     if (_shakeT > 0) {
       _shakeT -= dt;
-      final t = (_shakeT / 0.28).clamp(0.0, 1.0);
+      _shakeNoiseT += dt * 42;
+      final t = (_shakeT / _shakeDuration).clamp(0.0, 1.0);
+      final falloff = t * t;
       shake = Offset(
-        sin(_shakeT * 110) * _shakeAmp * t,
-        cos(_shakeT * 85) * _shakeAmp * 0.7 * t,
+        _shakeNoise.noise(_shakeNoiseT) * _shakeAmp * falloff,
+        _shakeNoise.noise(_shakeNoiseT + 17.3) * _shakeAmp * 0.72 * falloff,
       );
       changed = true;
     } else if (shake != Offset.zero) {
@@ -931,20 +967,30 @@ class _DramaticFxTickerState extends State<DramaticFxTicker>
   Widget build(BuildContext context) => widget.child;
 }
 
-/// Convenience wrapper for vent scenes.
-Widget ventFxLayer({
-  required DramaticFxController fx,
-  required Widget child,
-}) {
-  return DramaticFxOverlay(
-    particles: fx.particles,
-    rings: fx.rings,
-    popTexts: fx.popTexts,
-    smokes: fx.smokes,
-    cracks: fx.cracks,
-    flash: fx.flash,
-    vignette: fx.vignette,
-    shake: fx.shake,
-    child: child,
-  );
+/// Respects [MediaQuery.disableAnimations] for shake and flash.
+class VentFxLayer extends StatelessWidget {
+  const VentFxLayer({
+    super.key,
+    required this.fx,
+    required this.child,
+  });
+
+  final DramaticFxController fx;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final reduceMotion = MediaQuery.disableAnimationsOf(context);
+    return DramaticFxOverlay(
+      particles: fx.particles,
+      rings: fx.rings,
+      popTexts: fx.popTexts,
+      smokes: fx.smokes,
+      cracks: fx.cracks,
+      flash: reduceMotion ? 0 : fx.flash,
+      vignette: fx.vignette,
+      shake: reduceMotion ? Offset.zero : fx.shake,
+      child: child,
+    );
+  }
 }

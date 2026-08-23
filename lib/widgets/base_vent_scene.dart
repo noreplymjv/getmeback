@@ -7,6 +7,12 @@ abstract class BaseVentSceneState<T extends StatefulWidget> extends State<T>
     with TickerProviderStateMixin {
   late final DramaticFxController fx = DramaticFxController();
 
+  /// Heavy smash with automatic hit-stop.
+  void heavySmash({required Offset at, Color? color}) {
+    fx.megaImpact(at: at, color: color);
+    fx.triggerHitStop(const Duration(milliseconds: 45));
+  }
+
   @override
   void initState() {
     super.initState();

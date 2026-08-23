@@ -65,7 +65,7 @@ class _PaintBombSceneState extends BaseVentSceneState<PaintBombScene> {
             );
             return GestureDetector(
               onTapDown: (d) => _splash(d.localPosition, center),
-              child: ventFxLayer(
+              child: VentFxLayer(
                 fx: fx,
                 child: Center(
                   child: Stack(

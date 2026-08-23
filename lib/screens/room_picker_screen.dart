@@ -30,6 +30,7 @@ class RoomPickerScreen extends StatefulWidget {
 class _RoomPickerScreenState extends State<RoomPickerScreen> {
   VentTarget? _target;
   bool _failed = false;
+  bool _precached = false;
 
   @override
   void initState() {
@@ -40,7 +41,10 @@ class _RoomPickerScreenState extends State<RoomPickerScreen> {
   Future<void> _load() async {
     final id = widget.targetId;
     if (id == null || id == 'room_guest') {
-      if (mounted) setState(() => _target = roomGuestTarget);
+      if (mounted) {
+        setState(() => _target = roomGuestTarget);
+        _kickPrecache();
+      }
       return;
     }
     final targets = await StorageService.instance.loadTargets();
@@ -50,6 +54,26 @@ class _RoomPickerScreenState extends State<RoomPickerScreen> {
         _target = target;
         _failed = target == null;
       });
+      if (target != null) _kickPrecache();
+    }
+  }
+
+  void _kickPrecache() {
+    if (_precached) return;
+    _precached = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _precacheRoomAssets();
+    });
+  }
+
+  Future<void> _precacheRoomAssets() async {
+    if (!mounted) return;
+    final images = RoomSetup.all
+        .expand((r) => [r.resolvedAsset, r.resolvedBaseAsset])
+        .toList();
+    for (final path in images) {
+      if (!mounted) return;
+      await precacheImage(AssetImage(path), context);
     }
   }
 

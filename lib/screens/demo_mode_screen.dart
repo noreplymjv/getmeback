@@ -240,7 +240,7 @@ class _DemoModeScreenState extends State<DemoModeScreen> {
             child: Stack(
               children: [
                 Positioned.fill(
-                  child: ventFxLayer(
+                  child: VentFxLayer(
                     fx: _fx,
                     child: const SizedBox.expand(),
                   ),
