@@ -1,18 +1,15 @@
-# Cloudflare Workers + static assets (dashboard: workers/services/view/getmeback)
+# Cloudflare Worker static hosting — PREBUILT Flutter app (zero-config CI)
 #
-# Build (Workers Builds / CI): npm run build
-#   → scripts/cf-pages-build.sh → flutter build web → build/web
-#
-# Assets MUST be build/web (never the source shell folder "web").
+# Assets live in cf-dist/ (committed Flutter web build).
+# Cloudflare only uploads files — no Flutter install on their servers.
 
 name = "getmeback"
 compatibility_date = "2026-08-20"
 workers_dev = true
 
-# Pages-compatible field (harmless if this is a Worker)
-pages_build_output_dir = "build/web"
+pages_build_output_dir = "cf-dist"
 
 [assets]
-directory = "build/web"
+directory = "cf-dist"
 not_found_handling = "single-page-application"
 run_worker_first = false
