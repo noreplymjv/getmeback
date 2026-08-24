@@ -2,7 +2,7 @@
 # Cloudflare Pages build script — installs Flutter and builds the web app.
 set -euo pipefail
 
-FLUTTER_DIR="${HOME}/flutter"
+FLUTTER_DIR="${FLUTTER_ROOT:-${HOME}/flutter}"
 CHANNEL="${FLUTTER_CHANNEL:-stable}"
 
 if [[ ! -x "${FLUTTER_DIR}/bin/flutter" ]]; then

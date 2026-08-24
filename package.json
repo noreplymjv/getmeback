@@ -1,0 +1,8 @@
+{
+  "name": "getmeback",
+  "private": true,
+  "description": "GetMeBack Flutter web — Cloudflare Pages uses npm run build",
+  "scripts": {
+    "build": "bash scripts/cf-pages-build.sh"
+  }
+}
