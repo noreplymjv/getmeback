@@ -4,5 +4,6 @@
   "description": "GetMeBack — Cloudflare serves prebuilt Flutter web from cf-dist/",
   "scripts": {
     "build": "bash scripts/cf-verify-prebuilt.sh"
-  }
+  },
+  "devDependencies": {}
 }
