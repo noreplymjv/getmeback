@@ -1,11 +1,18 @@
-# Cloudflare Pages (free) — Git connected to GitHub
+# Cloudflare Workers + static assets (dashboard: workers/services/view/getmeback)
 #
-# Auto-detected settings MUST be:
-#   Build command:  npm run build  →  bash scripts/cf-pages-build.sh
-#   Output dir:     build/web
+# Build (Workers Builds / CI): npm run build
+#   → scripts/cf-pages-build.sh → flutter build web → build/web
 #
-# If the dashboard still says output "web", change it to build/web and retry.
+# Assets MUST be build/web (never the source shell folder "web").
 
 name = "getmeback"
 compatibility_date = "2026-08-20"
+workers_dev = true
+
+# Pages-compatible field (harmless if this is a Worker)
 pages_build_output_dir = "build/web"
+
+[assets]
+directory = "build/web"
+not_found_handling = "single-page-application"
+run_worker_first = false
