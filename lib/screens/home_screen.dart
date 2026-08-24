@@ -151,6 +151,19 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                     ),
                   ),
+                  const SizedBox(height: 18),
+                  FadeSlideIn(
+                    delay: const Duration(milliseconds: 360),
+                    child: Text(
+                      'V1A · 1.0.0-a1',
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                            color: AppTheme.goldSoft.withValues(alpha: 0.7),
+                            letterSpacing: 1.1,
+                            fontWeight: FontWeight.w700,
+                          ),
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -186,7 +199,10 @@ class _ModeCard extends StatelessWidget {
       goldEdge: true,
       child: Material(
         color: Colors.transparent,
-        child: InkWell(
+        child: Semantics(
+          button: true,
+          label: '$title. $subtitle',
+          child: InkWell(
           onTap: onTap,
           borderRadius: BorderRadius.circular(18),
           child: Ink(
@@ -279,6 +295,7 @@ class _ModeCard extends StatelessWidget {
                 ),
               ],
             ),
+          ),
           ),
         ),
       ),

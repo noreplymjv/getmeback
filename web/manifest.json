@@ -1,11 +1,11 @@
 {
     "name": "GetMeBack",
     "short_name": "GetMeBack",
-    "start_url": "./GetMeBack.html",
+    "start_url": "./index.html",
     "display": "standalone",
     "background_color": "#07060F",
     "theme_color": "#FF4D6D",
-    "description": "Cartoon venting, then calm.",
+    "description": "GetMeBack V1A — vent, smash rooms, then breathe calm.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

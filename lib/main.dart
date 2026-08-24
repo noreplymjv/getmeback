@@ -18,7 +18,7 @@ class GetMeBackApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp.router(
-      title: 'GetMeBack',
+      title: 'GetMeBack V1A',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.dark,
       routerConfig: appRouter,
