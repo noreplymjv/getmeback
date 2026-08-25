@@ -9,11 +9,11 @@ This audit evaluates the codebase and user experience of **GetMeBack v1.0.0+1** 
 ### 📈 Layout & Responsiveness
 *   **The Grid Spacing (Resolved):** Previously, the vent options screen stretched elements into giant boxes on desktop browsers, forcing excessive scrolling. Replacing this with `SliverGridDelegateWithMaxCrossAxisExtent` successfully resolved the issue by keeping buttons bounded to a maximum width of `140px` and automatically scaling columns (from 3 on mobile to 8+ on laptops).
 *   **Text Overflow and Long Names:** 
-    *   *Issue:* In [`target_avatar.dart`](file:///media/mj/DATA/GetMeBack/app/lib/widgets/target_avatar.dart#L70), the target's name is displayed in a standard `Text` widget without `maxLines` or `overflow` configurations. If a user names a target *"My noisy neighbor who plays drums at 3 AM"*, it will distort list items and grid spaces.
+    *   *Issue:* In [`lib/widgets/target_avatar.dart`](../lib/widgets/target_avatar.dart) (~L70), the target's name is displayed in a standard `Text` widget without `maxLines` or `overflow` configurations. If a user names a target *"My noisy neighbor who plays drums at 3 AM"*, it will distort list items and grid spaces.
     *   *Recommendation:* Wrap text with `TextOverflow.ellipsis` and set `maxLines: 1` or `2` inside widgets displaying custom names.
 
 ### 🎬 Interactive Feedback
-*   **Haptic Consistency:** Haptic calls in [`vent_sfx.dart`](file:///media/mj/DATA/GetMeBack/app/lib/services/vent_sfx.dart#L83) use default flutter settings. On some platforms, these can be intense. 
+*   **Haptic Consistency:** Haptic calls in [`lib/services/vent_sfx.dart`](../lib/services/vent_sfx.dart) (~L83) use default flutter settings. On some platforms, these can be intense. 
     *   *Recommendation:* Add a global setting to enable/disable haptics for users who find vibrations distracting.
 *   **Swipe/Drag Sensitivity:** In drag-and-drop scenes like `BlenderScene` or `TrashCanScene`, the landing zones are hardcoded offsets.
     *   *Recommendation:* Wrap zones with a proper `DragTarget` widget instead of calculating absolute coordinate heights, preventing alignment bugs when resizing browser windows.
@@ -23,7 +23,7 @@ This audit evaluates the codebase and user experience of **GetMeBack v1.0.0+1** 
 ## 2. Code & Architecture Audit
 
 ### ♻️ Boilerplate Reduction (Base Scene Refactoring)
-*   **Current State:** 21 files under [`vent_scenes/`](file:///media/mj/DATA/GetMeBack/app/lib/vent_scenes/) repeat the same code structures:
+*   **Current State:** 21 files under [`lib/vent_scenes/`](../lib/vent_scenes/) repeat the same code structures:
     ```dart
     late final DramaticFxController _fx = DramaticFxController();
     // listening, disposing, creating custom tickers, wrapping with shell

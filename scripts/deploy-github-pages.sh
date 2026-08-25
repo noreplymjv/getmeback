@@ -1,9 +1,17 @@
 #!/usr/bin/env bash
-# Redeploy GetMeBack to GitHub Pages (production).
+# Redeploy GetMeBack to GitHub Pages (production). Portable.
 set -euo pipefail
-ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 cd "$ROOT"
-FLUTTER_BIN="${FLUTTER_BIN:-/home/mj/flutter/bin/flutter}"
+
+FLUTTER_BIN="${FLUTTER_BIN:-$(command -v flutter || true)}"
+if [ -z "$FLUTTER_BIN" ] || [ ! -x "$FLUTTER_BIN" ]; then
+  echo "flutter not found; set FLUTTER_BIN or add flutter to PATH" >&2
+  exit 1
+fi
+
 "$FLUTTER_BIN" build web --release --base-href /getmeback/ --no-wasm-dry-run
 TMP="$(mktemp -d /tmp/getmeback-ghpages.XXXXXX)"
 cp -a build/web/. "$TMP"/

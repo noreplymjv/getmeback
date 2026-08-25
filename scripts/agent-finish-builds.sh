@@ -1,31 +1,48 @@
 #!/usr/bin/env bash
+# Finish remaining GetMeBack builds and collect artifacts. Portable.
 set -uo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+ARTIFACTS="${GETMEBACK_ARTIFACTS:-$ROOT/dist/builds}"
+OVERFLOW="${GETMEBACK_OVERFLOW:-$ROOT/dist/overflow}"
+
+FLUTTER_BIN="${FLUTTER_BIN:-$(command -v flutter || true)}"
+JAVA_HOME="${JAVA_HOME:-}"
+if [ -z "${JAVA_HOME:-}" ] && command -v java >/dev/null 2>&1; then
+  _java="$(command -v java)"
+  JAVA_HOME="$(cd "$(dirname "$_java")/.." && pwd)"
+fi
+
+SDK="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-}}"
+
 export CI=true
-export PATH="/home/mj/flutter/bin:/home/mj/.local/bin:$PATH"
-export JAVA_HOME=/home/mj/.local/jdk
-export ANDROID_HOME=/home/mj/Android/Sdk
-export ANDROID_SDK_ROOT=/home/mj/Android/Sdk
-export HOME=/home/mj
-export PUB_CACHE=/home/mj/.pub-cache
-export GRADLE_USER_HOME=/home/mj/.gradle
-PROJ=/home/mj/Projects/getmeback
-ARTIFACTS="/media/mj/DATA/iso files/getmeback-builds"
-OVERFLOW="/media/mj/DATA/iso files/overflow-20260809"
+export HOME="${HOME:-$(eval echo "~$(id -un)")}"
+export PATH="${FLUTTER_BIN:+$(dirname "$FLUTTER_BIN"):}${JAVA_HOME:+$JAVA_HOME/bin:}${HOME}/.local/bin:${SDK:+$SDK/cmdline-tools/latest/bin:$SDK/platform-tools:}${PATH:-}"
+export JAVA_HOME
+if [ -n "$SDK" ]; then
+  export ANDROID_HOME="$SDK"
+  export ANDROID_SDK_ROOT="$SDK"
+fi
+export PUB_CACHE="${PUB_CACHE:-$HOME/.pub-cache}"
+export GRADLE_USER_HOME="${GRADLE_USER_HOME:-$HOME/.gradle}"
+
 LOG="$ARTIFACTS/build-log-$(date +%Y%m%d-%H%M%S).txt"
 mkdir -p "$ARTIFACTS" "$OVERFLOW"
 exec > >(tee -a "$LOG") 2>&1
 
 echo "=== START $(date -Is) ==="
+echo "ROOT=$ROOT ARTIFACTS=$ARTIFACTS"
 whoami; id
-df -h / /media/mj/DATA
+df -h / "$ROOT" 2>/dev/null || df -h /
 
 free_root() {
   local avail_kb
   avail_kb=$(df -Pk / | awk 'NR==2{print $4}')
   # ~2GB = 2097152 KB
   if [ "$avail_kb" -lt 2097152 ]; then
-    echo "ROOT LOW (${avail_kb}KB). Moving bulky dirs..."
-    for d in /home/mj/.cache/Google /home/mj/.cache/pip /tmp/flutter_* /home/mj/.local/share/Trash; do
+    echo "ROOT LOW (${avail_kb}KB). Moving bulky dirs under OVERFLOW..."
+    for d in "$HOME/.cache/Google" "$HOME/.cache/pip" /tmp/flutter_* "$HOME/.local/share/Trash"; do
       if [ -e "$d" ]; then
         base=$(basename "$d")
         dest="$OVERFLOW/${base}-$(date +%H%M%S)"
@@ -48,7 +65,7 @@ if apt-get update; then
   fi
 else
   if sudo -n true 2>/dev/null; then
-    if sudo -n "$PROJ/scripts/install-linux-deps.sh"; then
+    if sudo -n "$ROOT/scripts/install-linux-deps.sh"; then
       SUDO_STATUS="sudo_nopass_ok"
     else
       SUDO_STATUS="sudo_nopass_script_failed"
@@ -60,17 +77,22 @@ fi
 pkg-config --exists gtk+-3.0 && GTK_OK=1 || GTK_OK=0
 echo "SUDO_STATUS=$SUDO_STATUS GTK_OK=$GTK_OK"
 
-# Prefer mj user for flutter
 run_flutter() {
-  if [ "$(id -u)" = "0" ] && id mj >/dev/null 2>&1; then
-    runuser -u mj -- env CI=true HOME=/home/mj USER=mj LOGNAME=mj \
-      PATH="$PATH" JAVA_HOME="$JAVA_HOME" ANDROID_HOME="$ANDROID_HOME" \
-      ANDROID_SDK_ROOT="$ANDROID_SDK_ROOT" PUB_CACHE="$PUB_CACHE" \
-      GRADLE_USER_HOME="$GRADLE_USER_HOME" \
-      bash -lc "cd '$PROJ' && $*"
-  else
-    (cd "$PROJ" && eval "$*")
+  if [ "$(id -u)" = "0" ]; then
+    local build_user="${SUDO_USER:-}"
+    if [ -z "$build_user" ] && id mj >/dev/null 2>&1; then
+      build_user=mj
+    fi
+    if [ -n "$build_user" ] && id "$build_user" >/dev/null 2>&1; then
+      runuser -u "$build_user" -- env CI=true HOME="$(eval echo "~$build_user")" USER="$build_user" LOGNAME="$build_user" \
+        PATH="$PATH" JAVA_HOME="$JAVA_HOME" ANDROID_HOME="${ANDROID_HOME:-}" \
+        ANDROID_SDK_ROOT="${ANDROID_SDK_ROOT:-}" PUB_CACHE="$PUB_CACHE" \
+        GRADLE_USER_HOME="$GRADLE_USER_HOME" \
+        bash -lc "cd '$ROOT' && $*"
+      return $?
+    fi
   fi
+  (cd "$ROOT" && eval "$*")
 }
 
 echo "=== FLUTTER DOCTOR ==="
@@ -107,7 +129,7 @@ if [ "$GTK_OK" = "1" ]; then
   LINUX_RC=$?
   echo LINUX_RC=$LINUX_RC
   if [ "$LINUX_RC" = "0" ]; then
-    (cd "$PROJ" && ./scripts/package-linux.sh)
+    (cd "$ROOT" && ./scripts/package-linux.sh)
     PKG_RC=$?
     echo PKG_RC=$PKG_RC
   fi
@@ -116,35 +138,34 @@ else
 fi
 
 echo "=== IPA CHECK ==="
-ls -la "$PROJ/ios/ExportOptions.plist" || true
+ls -la "$ROOT/ios/ExportOptions.plist" || true
 
 echo "=== COPY ARTIFACTS ==="
 for f in \
-  "$PROJ/build/app/outputs/flutter-apk/app-debug.apk" \
-  "$PROJ/build/app/outputs/flutter-apk/app-release.apk" \
-  "$PROJ/build/app/outputs/bundle/release/app-release.aab" \
-  "$PROJ"/build/linux/x64/release/*.tar.gz \
-  "$PROJ"/*.tar.gz \
-  "$PROJ"/dist/*.tar.gz
+  "$ROOT/build/app/outputs/flutter-apk/app-debug.apk" \
+  "$ROOT/build/app/outputs/flutter-apk/app-release.apk" \
+  "$ROOT/build/app/outputs/bundle/release/app-release.aab" \
+  "$ROOT"/build/linux/x64/release/*.tar.gz \
+  "$ROOT"/*.tar.gz \
+  "$ROOT"/dist/*.tar.gz
 do
   if [ -f "$f" ]; then
     cp -av "$f" "$ARTIFACTS/" || true
   fi
 done
-# also find any linux package
-find "$PROJ" -maxdepth 3 -name 'getmeback*.tar.gz' -o -name '*linux*.tar.gz' 2>/dev/null | while read -r t; do
+find "$ROOT" -maxdepth 3 \( -name 'getmeback*.tar.gz' -o -name '*linux*.tar.gz' \) 2>/dev/null | while read -r t; do
   cp -av "$t" "$ARTIFACTS/" || true
 done
 
 echo "=== ARTIFACTS ==="
 ls -lh \
-  "$PROJ/build/app/outputs/flutter-apk/"*.apk 2>/dev/null || true
+  "$ROOT/build/app/outputs/flutter-apk/"*.apk 2>/dev/null || true
 ls -lh \
-  "$PROJ/build/app/outputs/bundle/release/"*.aab 2>/dev/null || true
+  "$ROOT/build/app/outputs/bundle/release/"*.aab 2>/dev/null || true
 ls -lh "$ARTIFACTS" 2>/dev/null || true
-find "$PROJ/build/linux" -type f \( -name '*.tar.gz' -o -name 'getmeback' \) 2>/dev/null | head -20
+find "$ROOT/build/linux" -type f \( -name '*.tar.gz' -o -name 'getmeback' \) 2>/dev/null | head -20
 
 echo "=== DISK ==="
-df -h / /media/mj/DATA
+df -h / "$ROOT" 2>/dev/null || df -h /
 echo "SUDO_STATUS=$SUDO_STATUS GTK_OK=$GTK_OK DEBUG_RC=$DEBUG_RC RELEASE_RC=$RELEASE_RC AAB_RC=$AAB_RC LINUX_RC=$LINUX_RC PKG_RC=$PKG_RC"
 echo "=== DONE $(date -Is) LOG=$LOG ==="

@@ -4,6 +4,10 @@
 
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+cd "$ROOT"
+
 BUNDLE_DIR="build/linux/x64/release/bundle"
 OUTPUT="dist/getmeback-linux-x64.tar.gz"
 
@@ -15,4 +19,4 @@ fi
 mkdir -p dist
 tar -czf "$OUTPUT" -C "$BUNDLE_DIR" .
 echo "Created $OUTPUT"
-echo "Extract and run: tar -xzf $OUTPUT -C ~/getmeback && ~/getmeback/getmeback"
+echo "Extract and run: tar -xzf $OUTPUT -C ./getmeback-run && ./getmeback-run/getmeback"
