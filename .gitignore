@@ -74,3 +74,4 @@ scripts/*.nohup.out
 
 # Symlinked build output on DATA drive
 /build
+.github/workflows/

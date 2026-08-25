@@ -30,7 +30,13 @@ class AppTheme {
       useMaterial3: true,
       brightness: Brightness.dark,
       scaffoldBackgroundColor: background,
-      fontFamily: 'Roboto',
+      fontFamily: 'Ubuntu',
+      fontFamilyFallback: const [
+        'Segoe UI',
+        'Cantarell',
+        'Helvetica Neue',
+        'Arial',
+      ],
       colorScheme: const ColorScheme.dark(
         primary: accent,
         secondary: accentSecondary,

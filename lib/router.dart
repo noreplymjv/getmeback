@@ -10,6 +10,7 @@ import 'screens/create_character_screen.dart';
 import 'screens/demo_mode_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/room_picker_screen.dart';
+import 'screens/settings_screen.dart';
 import 'screens/vent_menu_screen.dart';
 import 'services/storage_service.dart';
 import 'vent_scenes/anvil_drop_scene.dart';
@@ -82,6 +83,11 @@ final GoRouter appRouter = GoRouter(
       path: '/demo',
       pageBuilder: (context, state) =>
           _fadeSlide(state, const DemoModeScreen()),
+    ),
+    GoRoute(
+      path: '/settings',
+      pageBuilder: (context, state) =>
+          _fadeSlide(state, const SettingsScreen()),
     ),
     GoRoute(
       path: '/create',

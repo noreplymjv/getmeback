@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:getmeback/models/preset_character.dart';
 import 'package:getmeback/models/room_setup.dart';
 import 'package:getmeback/models/vent_action.dart';
 
@@ -22,5 +23,17 @@ void main() {
     expect(kitchen, isNotNull);
     expect(kitchen!.props.length, 6);
     expect(kitchen.resolvedBaseAsset, contains('kitchen_base'));
+  });
+
+  test('V1A ships 22 vent actions (21 face + Room Rampage)', () {
+    expect(VentAction.all, hasLength(22));
+    final face = VentAction.all
+        .where((a) => a.type != VentActionType.roomRampage)
+        .length;
+    expect(face, 21);
+  });
+
+  test('V1A ships preset characters for quick starts', () {
+    expect(PresetCharacter.all, hasLength(25));
   });
 }

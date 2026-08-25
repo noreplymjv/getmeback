@@ -363,6 +363,15 @@ class _CreateCharacterScreenState extends State<CreateCharacterScreen> {
                             fontSize: 19,
                           ),
                     ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Private & playful — only use photos you have permission '
+                      'to use. Cartoon venting, not real-world harm.',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: AppTheme.goldSoft,
+                            height: 1.35,
+                          ),
+                    ),
                     const SizedBox(height: 12),
                     Row(
                       children: [

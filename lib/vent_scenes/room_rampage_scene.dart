@@ -33,6 +33,7 @@ class RoomRampageScene extends StatefulWidget {
 
 class _RoomRampageSceneState extends BaseVentSceneState<RoomRampageScene> {
   final Set<String> _smashed = {};
+  final Set<String> _smashing = {};
   String? _holdingId;
   String? _banner;
   bool _showCoach = true;
@@ -42,6 +43,8 @@ class _RoomRampageSceneState extends BaseVentSceneState<RoomRampageScene> {
   final _rng = Random();
   StreamSubscription<void>? _shakeSub;
   Offset _parallax = Offset.zero;
+
+  static const _smashJuiceMs = 280;
 
   int get _total => widget.room.props.length;
   int get _done => _smashed.length;
@@ -173,11 +176,19 @@ class _RoomRampageSceneState extends BaseVentSceneState<RoomRampageScene> {
 
   void _burst(Offset at, PropSmashStyle style, Color color, {RoomProp? prop}) {
     if (prop != null) {
+      final base = prop.color;
+      final palette = <Color>[
+        base,
+        Color.lerp(base, Colors.white, 0.35)!,
+        Color.lerp(base, Colors.black, 0.25)!,
+        Color.lerp(base, const Color(0xFFFFD166), 0.2)!,
+      ];
       _shatter.burst(
         at: at,
-        color: prop.color,
+        color: base,
         style: prop.effectiveMaterial.shatterStyle,
         count: prop.effectiveMaterial.shardCount,
+        palette: palette,
       );
     }
     switch (style) {
@@ -215,8 +226,45 @@ class _RoomRampageSceneState extends BaseVentSceneState<RoomRampageScene> {
     );
   }
 
-  void _onPropTap(RoomProp prop, Offset center, Size stage) {
-    if (_smashed.contains(prop.id)) return;
+  void _finishSmash(RoomProp prop, Offset center, Size stage, PropSmashStyle style) {
+    if (!mounted) return;
+    setState(() {
+      _smashing.remove(prop.id);
+      _smashed.add(prop.id);
+    });
+    _leaveScar(prop, center, style, stage);
+    _maybeFinish(center);
+  }
+
+  void _beginSmash(
+    RoomProp prop,
+    Offset stageCenter,
+    Offset viewportCenter,
+    Size stage, {
+    PropSmashStyle? styleOverride,
+    String? banner,
+  }) {
+    if (_smashed.contains(prop.id) || _smashing.contains(prop.id)) return;
+    final style = styleOverride ?? prop.style;
+    setState(() {
+      _smashing.add(prop.id);
+      if (_holdingId == prop.id) _holdingId = null;
+    });
+    if (banner != null) _setBanner(banner);
+    _playStyle(style, material: prop.effectiveMaterial);
+    _burst(viewportCenter, style, prop.color, prop: prop);
+    Future.delayed(const Duration(milliseconds: _smashJuiceMs), () {
+      _finishSmash(prop, stageCenter, stage, style);
+    });
+  }
+
+  void _onPropTap(
+    RoomProp prop,
+    Offset stageCenter,
+    Offset viewportCenter,
+    Size stage,
+  ) {
+    if (_smashed.contains(prop.id) || _smashing.contains(prop.id)) return;
     _dismissCoach();
 
     final holding = _holding;
@@ -229,21 +277,25 @@ class _RoomRampageSceneState extends BaseVentSceneState<RoomRampageScene> {
               ? prop.reactions['glass']
               : null);
 
-      setState(() {
-        _smashed.add(holding.id);
-        _smashed.add(prop.id);
-        _holdingId = null;
-      });
-
       final style = reaction?.style ?? prop.style;
       final msg = reaction?.message ??
           '${holding.label} → ${prop.label}!';
-      _setBanner(msg);
-      _leaveScar(holding, center, style, stage);
-      _leaveScar(prop, center, style, stage);
-      _playStyle(style, material: prop.effectiveMaterial);
-      _burst(center, style, prop.color, prop: prop);
-      _maybeFinish(center);
+      setState(() => _holdingId = null);
+      _beginSmash(
+        holding,
+        stageCenter,
+        viewportCenter,
+        stage,
+        styleOverride: style,
+        banner: msg,
+      );
+      _beginSmash(
+        prop,
+        stageCenter,
+        viewportCenter,
+        stage,
+        styleOverride: style,
+      );
       return;
     }
 
@@ -256,21 +308,19 @@ class _RoomRampageSceneState extends BaseVentSceneState<RoomRampageScene> {
       return;
     }
 
-    // Direct smash.
-    setState(() {
-      _smashed.add(prop.id);
-      if (_holdingId == prop.id) _holdingId = null;
-    });
+    // Direct smash with juice animation.
     final quirks = <String>[
       '${prop.label} smashed!',
       'CRASH — ${prop.label}!',
       '${prop.label} is gone!',
     ];
-    _setBanner(quirks[_rng.nextInt(quirks.length)]);
-    _leaveScar(prop, center, prop.style, stage);
-    _playStyle(prop.style, material: prop.effectiveMaterial);
-    _burst(center, prop.style, prop.color, prop: prop);
-    _maybeFinish(center);
+    _beginSmash(
+      prop,
+      stageCenter,
+      viewportCenter,
+      stage,
+      banner: quirks[_rng.nextInt(quirks.length)],
+    );
   }
 
   void _maybeFinish(Offset center) {
@@ -311,138 +361,180 @@ class _RoomRampageSceneState extends BaseVentSceneState<RoomRampageScene> {
           showTarget: false,
           child: LayoutBuilder(
             builder: (context, constraints) {
-              final size = Size(constraints.maxWidth, constraints.maxHeight);
-              _shatter.floorY = size.height * 0.92;
+              final viewport =
+                  Size(constraints.maxWidth, constraints.maxHeight);
+              // Share one cover-fitted stage so props align to furniture.
+              // Room art is 1536×1024 (3:2).
+              const roomAspect = 1.5;
+              final stage = _coverStage(viewport, roomAspect);
+              final stageOrigin = Offset(
+                (viewport.width - stage.width) / 2,
+                (viewport.height - stage.height) / 2,
+              );
+              _shatter.floorY = stageOrigin.dy + stage.height * 0.92;
               _parallax = SensorService.instance.parallax;
               final props = List<RoomProp>.from(room.props)
                 ..sort((a, b) => a.effectiveZIndex.compareTo(b.effectiveZIndex));
               return Stack(
                 fit: StackFit.expand,
                 children: [
-                  // Full-bleed room art (clean base when sprite mode)
-                  Positioned.fill(
-                    child: Transform.translate(
-                      offset: _parallax,
-                      child: Image.asset(
-                        room.resolvedBaseAsset,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, _, _) => DecoratedBox(
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              begin: Alignment.topCenter,
-                              end: Alignment.bottomCenter,
-                              colors: room.gradient,
-                            ),
+                  // Letterbox behind cover crop
+                  const ColoredBox(color: Color(0xFF0A0814)),
+                  Positioned(
+                    left: stageOrigin.dx + _parallax.dx,
+                    top: stageOrigin.dy + _parallax.dy,
+                    width: stage.width,
+                    height: stage.height,
+                    child: Image.asset(
+                      room.resolvedBaseAsset,
+                      fit: BoxFit.fill,
+                      filterQuality: FilterQuality.medium,
+                      errorBuilder: (_, _, _) => DecoratedBox(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: room.gradient,
                           ),
                         ),
                       ),
                     ),
                   ),
-                  // Persistent wreckage marks where props were smashed
-                  Positioned.fill(
+                  Positioned(
+                    left: stageOrigin.dx,
+                    top: stageOrigin.dy,
+                    width: stage.width,
+                    height: stage.height,
                     child: DestructionScarsLayer(scars: _scars),
                   ),
-                // Soft vignette so props pop
-                Positioned.fill(
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      gradient: RadialGradient(
-                        center: Alignment.center,
-                        radius: 1.15,
-                        colors: [
-                          Colors.transparent,
-                          Colors.black.withValues(alpha: 0.35),
+                  Positioned.fill(
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: RadialGradient(
+                          center: Alignment.center,
+                          radius: 1.15,
+                          colors: [
+                            Colors.transparent,
+                            Colors.black.withValues(alpha: 0.32),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  Positioned.fill(
+                    child: GestureDetector(
+                      behavior: HitTestBehavior.translucent,
+                      onTap: _cancelHold,
+                      child: const SizedBox.expand(),
+                    ),
+                  ),
+                  VentFxLayer(
+                    fx: fx,
+                    child: propShatterLayer(
+                      shatter: _shatter,
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          if (holding != null)
+                            Positioned.fill(
+                              child: IgnorePointer(
+                                child: ColoredBox(
+                                  color: Colors.black.withValues(alpha: 0.35),
+                                ),
+                              ),
+                            ),
+                          Positioned(
+                            top: 6,
+                            left: 10,
+                            right: 10,
+                            child: _HudBar(
+                              room: room,
+                              done: _done,
+                              total: _total,
+                              holding: holding,
+                            ),
+                          ),
+                          Positioned(
+                            left: stageOrigin.dx,
+                            top: stageOrigin.dy,
+                            width: stage.width,
+                            height: stage.height,
+                            child: Stack(
+                              clipBehavior: Clip.none,
+                              children: [
+                                for (final prop in props)
+                                  InteractiveRoomProp(
+                                    roomId: room.id,
+                                    prop: prop,
+                                    stage: stage,
+                                    pulse: _pulse,
+                                    smashed: _smashed.contains(prop.id),
+                                    smashing: _smashing.contains(prop.id),
+                                    holding: _holdingId == prop.id,
+                                    throwTarget: holding != null &&
+                                        holding.id != prop.id &&
+                                        !_smashed.contains(prop.id) &&
+                                        !_smashing.contains(prop.id),
+                                    spriteMode: true,
+                                    onTap: (center) => _onPropTap(
+                                      prop,
+                                      center,
+                                      center + stageOrigin,
+                                      stage,
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                          if (_banner != null)
+                            Positioned(
+                              left: 16,
+                              right: 16,
+                              bottom: 56,
+                              child: IgnorePointer(
+                                child: _BannerChip(text: _banner!),
+                              ),
+                            ),
+                          if (!_cleared && _done > 0)
+                            Positioned(
+                              left: 12,
+                              right: 12,
+                              bottom: 12,
+                              child: IgnorePointer(
+                                child: _RemainingStrip(
+                                  room: room,
+                                  smashed: _smashed,
+                                ),
+                              ),
+                            ),
+                          if (_showCoach)
+                            Positioned.fill(
+                              child: _CoachOverlay(
+                                onGotIt: _dismissCoach,
+                              ),
+                            ),
                         ],
                       ),
                     ),
                   ),
-                ),
-                // Empty space: cancel hold only (never auto-smash)
-                Positioned.fill(
-                  child: GestureDetector(
-                    behavior: HitTestBehavior.translucent,
-                    onTap: _cancelHold,
-                    child: const SizedBox.expand(),
-                  ),
-                ),
-                    VentFxLayer(
-                  fx: fx,
-                  child: propShatterLayer(
-                    shatter: _shatter,
-                    child: Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      if (holding != null)
-                        Positioned.fill(
-                          child: IgnorePointer(
-                            child: ColoredBox(
-                              color: Colors.black.withValues(alpha: 0.35),
-                            ),
-                          ),
-                        ),
-                      Positioned(
-                        top: 6,
-                        left: 10,
-                        right: 10,
-                        child: _HudBar(
-                          room: room,
-                          done: _done,
-                          total: _total,
-                          holding: holding,
-                        ),
-                      ),
-                      for (final prop in props)
-                        InteractiveRoomProp(
-                          roomId: room.id,
-                          prop: prop,
-                          stage: size,
-                          pulse: _pulse,
-                          smashed: _smashed.contains(prop.id),
-                          holding: _holdingId == prop.id,
-                          throwTarget: holding != null &&
-                              holding.id != prop.id &&
-                              !_smashed.contains(prop.id),
-                          spriteMode: true,
-                          onTap: (center) => _onPropTap(prop, center, size),
-                        ),
-                      if (_banner != null)
-                        Positioned(
-                          left: 16,
-                          right: 16,
-                          bottom: 56,
-                          child: IgnorePointer(
-                            child: _BannerChip(text: _banner!),
-                          ),
-                        ),
-                      if (!_cleared && _done > 0)
-                        Positioned(
-                          left: 12,
-                          right: 12,
-                          bottom: 12,
-                          child: IgnorePointer(
-                            child: _RemainingStrip(
-                              room: room,
-                              smashed: _smashed,
-                            ),
-                          ),
-                        ),
-                      if (_showCoach)
-                        Positioned.fill(
-                          child: _CoachOverlay(
-                            onGotIt: _dismissCoach,
-                          ),
-                        ),
-                    ],
-                  ),
-                  ),
-                ),
-              ],
-            );
-          },
-        ),
+                ],
+              );
+            },
+          ),
         ),
       ),
     );
+  }
+
+  /// Stage size for BoxFit.cover of [imageAspect] into [viewport].
+  static Size _coverStage(Size viewport, double imageAspect) {
+    final viewAspect = viewport.width / viewport.height;
+    if (viewAspect > imageAspect) {
+      // Viewport wider than image → fill width, crop top/bottom.
+      return Size(viewport.width, viewport.width / imageAspect);
+    }
+    // Viewport taller → fill height, crop sides.
+    return Size(viewport.height * imageAspect, viewport.height);
   }
 }
 

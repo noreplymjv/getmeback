@@ -70,12 +70,17 @@ class PropShatterController extends ChangeNotifier {
     Color color = const Color(0xFFECEFF1),
     PropShatterStyle style = PropShatterStyle.ceramic,
     int count = 24,
+    List<Color>? palette,
   }) {
     final cfg = _cfg(style);
+    final colors = (palette == null || palette.isEmpty)
+        ? <Color>[color]
+        : palette;
     for (var i = 0; i < count; i++) {
       final angle = _rng.nextDouble() * pi * 2;
       final speed = cfg.minSpeed + _rng.nextDouble() * cfg.speedRange;
       final life = cfg.life + _rng.nextDouble() * cfg.lifeVar;
+      final shardColor = colors[_rng.nextInt(colors.length)];
       shards.add(
         PropShatterShard(
           x: at.dx + (_rng.nextDouble() - 0.5) * cfg.spread,
@@ -83,7 +88,7 @@ class PropShatterController extends ChangeNotifier {
           vx: cos(angle) * speed,
           vy: sin(angle) * speed - cfg.lift,
           size: cfg.minSize + _rng.nextDouble() * cfg.sizeRange,
-          color: _tint(color, style),
+          color: _tint(shardColor, style),
           life: life,
           maxLife: life,
           style: style,

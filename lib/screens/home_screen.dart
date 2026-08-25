@@ -2,20 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../models/room_setup.dart';
-import '../services/storage_service.dart';
 import '../services/vent_sfx.dart';
 import '../theme/app_theme.dart';
 import '../widgets/premium_chrome.dart';
 
 /// Front door: Character vent, Room rampage, or Watch Demo.
-class HomeScreen extends StatefulWidget {
+class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
-  @override
-  State<HomeScreen> createState() => _HomeScreenState();
-}
-
-class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -54,20 +48,13 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                         const Spacer(),
                         IconButton(
-                          tooltip: StorageService.instance.hapticsEnabled
-                              ? 'Haptics on'
-                              : 'Haptics off',
-                          onPressed: () async {
-                            final next =
-                                !StorageService.instance.hapticsEnabled;
-                            await StorageService.instance
-                                .setHapticsEnabled(next);
-                            if (mounted) setState(() {});
+                          tooltip: 'Settings',
+                          onPressed: () {
+                            VentSfx.light();
+                            context.push('/settings');
                           },
-                          icon: Icon(
-                            StorageService.instance.hapticsEnabled
-                                ? Icons.vibration
-                                : Icons.phone_android,
+                          icon: const Icon(
+                            Icons.settings_outlined,
                             color: AppTheme.goldSoft,
                           ),
                         ),
@@ -144,7 +131,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   FadeSlideIn(
                     delay: const Duration(milliseconds: 320),
                     child: Text(
-                      'Tip: start with Watch Demo if you’re new.',
+                      'Tip: start with Watch Demo if you’re new. '
+                      'Open Settings for sound & haptics.',
                       textAlign: TextAlign.center,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             color: AppTheme.goldSoft,

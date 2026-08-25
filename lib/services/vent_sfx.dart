@@ -71,6 +71,7 @@ class VentSfx {
   }
 
   void play(Sfx sfx) {
+    if (!StorageService.instance.sfxEnabled) return;
     if (!_ready || _pool.isEmpty) {
       init();
       return;

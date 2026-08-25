@@ -1,10 +1,12 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../models/room_setup.dart';
 import '../theme/app_theme.dart';
 
-/// Renders a real prop sprite (or legacy pin fallback) at a tuned anchor.
-class InteractiveRoomProp extends StatelessWidget {
+/// Renders a real prop sprite (or legacy pin) with smash juice animation.
+class InteractiveRoomProp extends StatefulWidget {
   const InteractiveRoomProp({
     super.key,
     required this.roomId,
@@ -16,6 +18,7 @@ class InteractiveRoomProp extends StatelessWidget {
     required this.throwTarget,
     required this.spriteMode,
     required this.onTap,
+    this.smashing = false,
   });
 
   final String roomId;
@@ -23,32 +26,73 @@ class InteractiveRoomProp extends StatelessWidget {
   final Size stage;
   final Animation<double> pulse;
   final bool smashed;
+  final bool smashing;
   final bool holding;
   final bool throwTarget;
   final bool spriteMode;
   final ValueChanged<Offset> onTap;
 
-  Offset get _anchor => prop.anchorFor(roomId);
-  Offset get _center => Offset(_anchor.dx * stage.width, _anchor.dy * stage.height);
+  @override
+  State<InteractiveRoomProp> createState() => _InteractiveRoomPropState();
+}
+
+class _InteractiveRoomPropState extends State<InteractiveRoomProp>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _smash;
+
+  Offset get _anchor => widget.prop.anchorFor(widget.roomId);
+  Offset get _center =>
+      Offset(_anchor.dx * widget.stage.width, _anchor.dy * widget.stage.height);
 
   Size get _pixelSize {
-    final w = prop.effectiveSizeNorm * stage.width;
-    return Size(w, w * prop.effectiveAspectRatio);
+    final w = widget.prop.effectiveSizeNorm * widget.stage.width;
+    return Size(w, w * widget.prop.effectiveAspectRatio);
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _smash = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 280),
+    );
+    if (widget.smashing) {
+      _smash.forward(from: 0);
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant InteractiveRoomProp oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.smashing && !oldWidget.smashing) {
+      _smash.forward(from: 0);
+    }
+    if (!widget.smashing && !widget.smashed) {
+      _smash.value = 0;
+    }
+  }
+
+  @override
+  void dispose() {
+    _smash.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    if (smashed) return const SizedBox.shrink();
+    if (widget.smashed && !widget.smashing) {
+      return const SizedBox.shrink();
+    }
 
     final center = _center;
     final size = _pixelSize;
     const pad = 12.0;
-    final hitW = spriteMode ? size.width + pad : 72.0;
-    final hitH = spriteMode ? size.height + pad : 72.0;
+    final hitW = widget.spriteMode ? size.width + pad : 72.0;
+    final hitH = widget.spriteMode ? size.height + pad : 72.0;
 
-    final accent = holding
+    final accent = widget.holding
         ? AppTheme.gold
-        : throwTarget
+        : widget.throwTarget
             ? const Color(0xFFFFEB3B)
             : Colors.white;
 
@@ -56,37 +100,47 @@ class InteractiveRoomProp extends StatelessWidget {
       left: center.dx - hitW / 2,
       top: center.dy - hitH / 2,
       width: hitW,
-      height: hitH + (spriteMode ? 0 : 18),
+      height: hitH + (widget.spriteMode ? 0 : 18),
       child: Semantics(
         button: true,
-        enabled: !smashed,
-        label: smashed ? null : '${prop.label}, smashable object in room',
-        hint: holding
+        enabled: !widget.smashed && !widget.smashing,
+        label: widget.smashed
+            ? null
+            : '${widget.prop.label}, smashable object in room',
+        hint: widget.holding
             ? 'Selected — tap another object to throw'
-            : throwTarget
+            : widget.throwTarget
                 ? 'Throw target'
                 : 'Tap to smash',
-        onTap: smashed ? null : () => onTap(center),
+        onTap: (widget.smashed || widget.smashing)
+            ? null
+            : () => widget.onTap(center),
         child: GestureDetector(
           behavior: HitTestBehavior.opaque,
-          onTap: () => onTap(center),
-          child: spriteMode
-            ? _SpriteProp(
-                prop: prop,
-                roomId: roomId,
-                size: size,
-                pulse: pulse,
-                holding: holding,
-                throwTarget: throwTarget,
-                accent: accent,
-              )
-            : _LegacyPin(
-                prop: prop,
-                pulse: pulse,
-                holding: holding,
-                throwTarget: throwTarget,
-                accent: accent,
-              ),
+          onTap: () {
+            if (!widget.smashed && !widget.smashing) {
+              widget.onTap(center);
+            }
+          },
+          child: widget.spriteMode
+              ? _SpriteProp(
+                  prop: widget.prop,
+                  roomId: widget.roomId,
+                  size: size,
+                  pulse: widget.pulse,
+                  holding: widget.holding,
+                  throwTarget: widget.throwTarget,
+                  accent: accent,
+                  smash: _smash,
+                  smashStyle: widget.prop.style,
+                )
+              : _LegacyPin(
+                  prop: widget.prop,
+                  pulse: widget.pulse,
+                  holding: widget.holding,
+                  throwTarget: widget.throwTarget,
+                  accent: accent,
+                ),
         ),
       ),
     );
@@ -102,6 +156,8 @@ class _SpriteProp extends StatelessWidget {
     required this.holding,
     required this.throwTarget,
     required this.accent,
+    required this.smash,
+    required this.smashStyle,
   });
 
   final RoomProp prop;
@@ -111,39 +167,97 @@ class _SpriteProp extends StatelessWidget {
   final bool holding;
   final bool throwTarget;
   final Color accent;
+  final AnimationController smash;
+  final PropSmashStyle smashStyle;
 
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
-      animation: pulse,
+      animation: Listenable.merge([pulse, smash]),
       builder: (context, _) {
         final glow = 0.12 + pulse.value * 0.28;
-        return Transform.scale(
-          scale: holding ? 1.06 : 1,
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              boxShadow: [
-                BoxShadow(
-                  color: accent.withValues(alpha: glow),
-                  blurRadius: 14 + pulse.value * 10,
-                  spreadRadius: throwTarget ? 2 : 0,
+        final t = Curves.easeIn.transform(smash.value);
+        late final double scaleX;
+        late final double scaleY;
+        late final double angle;
+        late final double opacity;
+        late final Offset slide;
+
+        switch (smashStyle) {
+          case PropSmashStyle.tipOver:
+            scaleX = 1 - t * 0.15;
+            scaleY = 1 - t * 0.35;
+            angle = t * (math.pi / 2.4);
+            opacity = 1 - t;
+            slide = Offset(t * size.width * 0.25, t * size.height * 0.35);
+            break;
+          case PropSmashStyle.smashFlat:
+            scaleX = 1 + t * 0.35;
+            scaleY = 1 - t * 0.85;
+            angle = t * 0.08;
+            opacity = 1 - t;
+            slide = Offset(0, t * size.height * 0.2);
+            break;
+          case PropSmashStyle.shatter:
+          case PropSmashStyle.crack:
+          case PropSmashStyle.explode:
+            scaleX = 1 + t * 0.25;
+            scaleY = 1 + t * 0.25;
+            angle = t * 0.4;
+            opacity = 1 - Curves.easeIn.transform(t);
+            slide = Offset.zero;
+            break;
+          case PropSmashStyle.spill:
+          case PropSmashStyle.splash:
+            scaleX = 1 + t * 0.5;
+            scaleY = 1 - t * 0.55;
+            angle = 0;
+            opacity = 1 - t;
+            slide = Offset(0, t * size.height * 0.15);
+            break;
+        }
+
+        return Opacity(
+          opacity: opacity.clamp(0.0, 1.0),
+          child: Transform.translate(
+            offset: slide,
+            child: Transform.rotate(
+              angle: angle,
+              child: Transform.scale(
+                scaleX: (holding ? 1.06 : 1) * scaleX,
+                scaleY: (holding ? 1.06 : 1) * scaleY,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    boxShadow: [
+                      BoxShadow(
+                        color: accent.withValues(alpha: glow * (1 - t)),
+                        blurRadius: 14 + pulse.value * 10,
+                        spreadRadius: throwTarget ? 2 : 0,
+                      ),
+                    ],
+                  ),
+                  child: Image.asset(
+                    prop.resolvedSprite(roomId),
+                    width: size.width,
+                    height: size.height,
+                    fit: BoxFit.contain,
+                    filterQuality: FilterQuality.medium,
+                    errorBuilder: (_, _, _) => Container(
+                      width: size.width,
+                      height: size.height,
+                      decoration: BoxDecoration(
+                        color: prop.color.withValues(alpha: 0.85),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: accent, width: 2),
+                      ),
+                      child: Icon(
+                        prop.icon,
+                        color: Colors.white,
+                        size: size.width * 0.4,
+                      ),
+                    ),
+                  ),
                 ),
-              ],
-            ),
-            child: Image.asset(
-              prop.resolvedSprite(roomId),
-              width: size.width,
-              height: size.height,
-              fit: BoxFit.contain,
-              errorBuilder: (_, _, _) => Container(
-                width: size.width,
-                height: size.height,
-                decoration: BoxDecoration(
-                  color: prop.color.withValues(alpha: 0.85),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: accent, width: 2),
-                ),
-                child: Icon(prop.icon, color: Colors.white, size: size.width * 0.4),
               ),
             ),
           ),

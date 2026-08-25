@@ -1,0 +1,188 @@
+{
+  "rooms": [
+    {
+      "room": "kitchen",
+      "soft": 6,
+      "count": 6,
+      "size": [
+        1536,
+        1024
+      ]
+    },
+    {
+      "room": "bathroom",
+      "soft": 6,
+      "count": 6,
+      "size": [
+        1536,
+        1024
+      ]
+    },
+    {
+      "room": "office",
+      "soft": 6,
+      "count": 6,
+      "size": [
+        1536,
+        1024
+      ]
+    },
+    {
+      "room": "cabin",
+      "soft": 6,
+      "count": 6,
+      "size": [
+        1536,
+        1024
+      ]
+    },
+    {
+      "room": "living",
+      "soft": 6,
+      "count": 6,
+      "size": [
+        1536,
+        1024
+      ]
+    },
+    {
+      "room": "bedroom",
+      "soft": 6,
+      "count": 6,
+      "size": [
+        1536,
+        1024
+      ]
+    },
+    {
+      "room": "garage",
+      "soft": 6,
+      "count": 6,
+      "size": [
+        1536,
+        1024
+      ]
+    },
+    {
+      "room": "dining",
+      "soft": 6,
+      "count": 6,
+      "size": [
+        1536,
+        1024
+      ]
+    },
+    {
+      "room": "hotel",
+      "soft": 6,
+      "count": 6,
+      "size": [
+        1536,
+        1024
+      ]
+    },
+    {
+      "room": "classroom",
+      "soft": 6,
+      "count": 6,
+      "size": [
+        1536,
+        1024
+      ]
+    },
+    {
+      "room": "locker",
+      "soft": 6,
+      "count": 6,
+      "size": [
+        1536,
+        1024
+      ]
+    },
+    {
+      "room": "cafe",
+      "soft": 6,
+      "count": 6,
+      "size": [
+        1536,
+        1024
+      ]
+    },
+    {
+      "room": "studio",
+      "soft": 6,
+      "count": 6,
+      "size": [
+        1536,
+        1024
+      ]
+    },
+    {
+      "room": "gameroom",
+      "soft": 6,
+      "count": 6,
+      "size": [
+        1536,
+        1024
+      ]
+    },
+    {
+      "room": "laundry",
+      "soft": 6,
+      "count": 6,
+      "size": [
+        1536,
+        1024
+      ]
+    },
+    {
+      "room": "balcony",
+      "soft": 6,
+      "count": 6,
+      "size": [
+        1536,
+        1024
+      ]
+    },
+    {
+      "room": "workshop",
+      "soft": 6,
+      "count": 6,
+      "size": [
+        1536,
+        1024
+      ]
+    },
+    {
+      "room": "penthouse",
+      "soft": 6,
+      "count": 6,
+      "size": [
+        1536,
+        1024
+      ]
+    },
+    {
+      "room": "dorm",
+      "soft": 6,
+      "count": 6,
+      "size": [
+        1536,
+        1024
+      ]
+    },
+    {
+      "room": "server",
+      "soft": 6,
+      "count": 6,
+      "size": [
+        1536,
+        1024
+      ]
+    }
+  ],
+  "totals": {
+    "soft": 120,
+    "props": 120
+  }
+}

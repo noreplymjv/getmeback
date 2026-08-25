@@ -11,6 +11,7 @@ class StorageService {
 
   static const _targetsKey = 'vent_targets';
   static const _hapticsKey = 'haptics_enabled';
+  static const _sfxKey = 'sfx_enabled';
   static const _zenStreakKey = 'zen_streak_count';
   static const _zenLastCalmKey = 'zen_streak_last_calm';
   static const _journalKey = 'micro_journal_entries';
@@ -23,15 +24,25 @@ class StorageService {
   bool _hapticsEnabled = true;
   bool get hapticsEnabled => _hapticsEnabled;
 
+  bool _sfxEnabled = true;
+  bool get sfxEnabled => _sfxEnabled;
+
   Future<void> loadSettings() async {
     final prefs = await SharedPreferences.getInstance();
     _hapticsEnabled = prefs.getBool(_hapticsKey) ?? true;
+    _sfxEnabled = prefs.getBool(_sfxKey) ?? true;
   }
 
   Future<void> setHapticsEnabled(bool enabled) async {
     _hapticsEnabled = enabled;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_hapticsKey, enabled);
+  }
+
+  Future<void> setSfxEnabled(bool enabled) async {
+    _sfxEnabled = enabled;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_sfxKey, enabled);
   }
 
   String _todayKey([DateTime? when]) {
@@ -82,6 +93,35 @@ class StorageService {
     existing.insert(0, '${DateTime.now().toIso8601String()}|$text');
     if (existing.length > 30) existing.removeRange(30, existing.length);
     await prefs.setStringList(_journalKey, existing);
+  }
+
+  /// Recent journal lines stored as `iso8601|text`.
+  Future<List<({DateTime at, String text})>> loadJournalEntries() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getStringList(_journalKey) ?? [];
+    final out = <({DateTime at, String text})>[];
+    for (final line in raw) {
+      final sep = line.indexOf('|');
+      if (sep <= 0) continue;
+      final at = DateTime.tryParse(line.substring(0, sep));
+      if (at == null) continue;
+      out.add((at: at, text: line.substring(sep + 1)));
+    }
+    return out;
+  }
+
+  /// Wipe targets, journal, and zen streak. Keeps haptics/SFX toggles.
+  Future<void> clearAllLocalData() async {
+    final targets = await loadTargets();
+    for (final t in List<VentTarget>.from(targets)) {
+      await deleteTarget(t.id);
+    }
+    await _writeTargets([]);
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_journalKey);
+    await prefs.remove(_zenStreakKey);
+    await prefs.remove(_zenLastCalmKey);
   }
 
   Future<List<VentTarget>> loadTargets() async {
