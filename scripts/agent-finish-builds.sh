@@ -4,17 +4,74 @@ set -uo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+
+# Prefer env, then AllProjects/.portable-sdk, then app/.tooling, then PATH
+_resolve_flutter() {
+  if [ -n "${FLUTTER_BIN:-}" ] && [ -x "${FLUTTER_BIN}" ]; then
+    echo "$FLUTTER_BIN"; return
+  fi
+  local c
+  for c in \
+    "$ROOT/../../.portable-sdk/flutter/bin/flutter" \
+    "$ROOT/../.portable-sdk/flutter/bin/flutter" \
+    "$ROOT/.tooling/flutter/bin/flutter"
+  do
+    if [ -x "$c" ]; then echo "$c"; return; fi
+  done
+  command -v flutter 2>/dev/null || true
+}
+
+_resolve_java_home() {
+  if [ -n "${JAVA_HOME:-}" ] && [ -x "${JAVA_HOME}/bin/java" ]; then
+    echo "$JAVA_HOME"; return
+  fi
+  local c
+  for c in \
+    "$ROOT/../../.portable-sdk/jdk" \
+    "$ROOT/../.portable-sdk/jdk" \
+    "$ROOT/.tooling/jdk" \
+    "${HOME}/.local/jdk"
+  do
+    if [ -x "$c/bin/java" ]; then echo "$c"; return; fi
+  done
+  if command -v java >/dev/null 2>&1; then
+    _java="$(command -v java)"
+    (cd "$(dirname "$_java")/.." && pwd)
+    return
+  fi
+  echo ""
+}
+
+_resolve_android_home() {
+  if [ -n "${ANDROID_HOME:-}" ] && [ -d "${ANDROID_HOME}" ]; then
+    echo "$ANDROID_HOME"; return
+  fi
+  if [ -n "${ANDROID_SDK_ROOT:-}" ] && [ -d "${ANDROID_SDK_ROOT}" ]; then
+    echo "$ANDROID_SDK_ROOT"; return
+  fi
+  local c
+  for c in \
+    "$ROOT/../../.portable-sdk/android-sdk" \
+    "$ROOT/../.portable-sdk/android-sdk" \
+    "$ROOT/../android-sdk" \
+    "$ROOT/.tooling/android-sdk"
+  do
+    if [ -d "$c" ]; then echo "$c"; return; fi
+  done
+  echo ""
+}
+
 ARTIFACTS="${GETMEBACK_ARTIFACTS:-$ROOT/dist/builds}"
 OVERFLOW="${GETMEBACK_OVERFLOW:-$ROOT/dist/overflow}"
 
-FLUTTER_BIN="${FLUTTER_BIN:-$(command -v flutter || true)}"
+FLUTTER_BIN="$(_resolve_flutter)"
 JAVA_HOME="${JAVA_HOME:-}"
-if [ -z "${JAVA_HOME:-}" ] && command -v java >/dev/null 2>&1; then
-  _java="$(command -v java)"
-  JAVA_HOME="$(cd "$(dirname "$_java")/.." && pwd)"
+if [ -z "${JAVA_HOME:-}" ]; then
+  JAVA_HOME="$(_resolve_java_home)"
 fi
 
-SDK="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-}}"
+SDK="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-$(_resolve_android_home)}}"
 
 export CI=true
 export HOME="${HOME:-$(eval echo "~$(id -un)")}"

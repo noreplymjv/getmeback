@@ -85,3 +85,8 @@ See [`docs/V1A_SHIP_CHECKLIST.md`](docs/V1A_SHIP_CHECKLIST.md) and [`docs/V1A_AU
 ## License
 
 Private project — not published to pub.dev.
+
+## Portable tooling (AllProjects / Passport)
+
+When this app sits under `AllProjects/GetMeBack/app`, shared Flutter/JDK live in `../../.portable-sdk`.  
+Activate: `source ../../.portable-sdk/activate.sh`. Details: `AllProjects/PORTABLE-TOOLING.md`.

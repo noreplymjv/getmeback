@@ -75,3 +75,6 @@ scripts/*.nohup.out
 # Symlinked build output on DATA drive
 /build
 .github/workflows/
+
+# Never commit portable Flutter/JDK trees
+.portable-sdk/

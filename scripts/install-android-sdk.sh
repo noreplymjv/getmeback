@@ -7,14 +7,68 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
-SDK_ROOT="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-$HOME/Android/Sdk}}"
-if [ -z "${JAVA_HOME:-}" ]; then
+
+# Prefer env, then AllProjects/.portable-sdk, then app/.tooling, then PATH
+_resolve_flutter() {
+  if [ -n "${FLUTTER_BIN:-}" ] && [ -x "${FLUTTER_BIN}" ]; then
+    echo "$FLUTTER_BIN"; return
+  fi
+  local c
+  for c in \
+    "$ROOT/../../.portable-sdk/flutter/bin/flutter" \
+    "$ROOT/../.portable-sdk/flutter/bin/flutter" \
+    "$ROOT/.tooling/flutter/bin/flutter"
+  do
+    if [ -x "$c" ]; then echo "$c"; return; fi
+  done
+  command -v flutter 2>/dev/null || true
+}
+
+_resolve_java_home() {
+  if [ -n "${JAVA_HOME:-}" ] && [ -x "${JAVA_HOME}/bin/java" ]; then
+    echo "$JAVA_HOME"; return
+  fi
+  local c
+  for c in \
+    "$ROOT/../../.portable-sdk/jdk" \
+    "$ROOT/../.portable-sdk/jdk" \
+    "$ROOT/.tooling/jdk" \
+    "${HOME}/.local/jdk"
+  do
+    if [ -x "$c/bin/java" ]; then echo "$c"; return; fi
+  done
   if command -v java >/dev/null 2>&1; then
     _java="$(command -v java)"
-    JAVA_HOME="$(cd "$(dirname "$_java")/.." && pwd)"
-  elif [ -d "$HOME/.local/jdk" ]; then
-    JAVA_HOME="$HOME/.local/jdk"
+    (cd "$(dirname "$_java")/.." && pwd)
+    return
   fi
+  echo ""
+}
+
+_resolve_android_home() {
+  if [ -n "${ANDROID_HOME:-}" ] && [ -d "${ANDROID_HOME}" ]; then
+    echo "$ANDROID_HOME"; return
+  fi
+  if [ -n "${ANDROID_SDK_ROOT:-}" ] && [ -d "${ANDROID_SDK_ROOT}" ]; then
+    echo "$ANDROID_SDK_ROOT"; return
+  fi
+  local c
+  for c in \
+    "$ROOT/../../.portable-sdk/android-sdk" \
+    "$ROOT/../.portable-sdk/android-sdk" \
+    "$ROOT/../android-sdk" \
+    "$ROOT/.tooling/android-sdk"
+  do
+    if [ -d "$c" ]; then echo "$c"; return; fi
+  done
+  echo ""
+}
+
+
+_PORTABLE_SDK="$(_resolve_android_home)"
+SDK_ROOT="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-${_PORTABLE_SDK:-$HOME/Android/Sdk}}}"
+if [ -z "${JAVA_HOME:-}" ]; then
+  JAVA_HOME="$(_resolve_java_home)"
 fi
 
 export JAVA_HOME
