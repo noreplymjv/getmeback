@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base href="/getmeback/">
+
+  <meta charset="UTF-8">
+  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+  <meta name="description" content="GetMeBack V1A — cartoon venting, room smash, then calm breathing.">
+  <meta name="theme-color" content="#FF4D6D">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="GetMeBack">
+  <link rel="apple-touch-icon" href="icons/Icon-192.png">
+
+  <link rel="icon" type="image/png" href="favicon.png"/>
+
+  <title>GetMeBack V1A</title>
+  <link rel="manifest" href="manifest.json">
+  <style>
+    html, body {
+      height: 100%;
+      margin: 0;
+      background: #07060F;
+      overflow: hidden;
+    }
+    #gmb-boot {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      color: #FF4D6D;
+      font-family: system-ui, -apple-system, sans-serif;
+      z-index: 9999;
+      background: radial-gradient(ellipse at center, #1a1430 0%, #07060F 70%);
+    }
+    #gmb-boot .title {
+      font-weight: 800;
+      font-size: 32px;
+      letter-spacing: 0.4px;
+    }
+    #gmb-boot .sub {
+      color: #B8B4C8;
+      font-size: 14px;
+    }
+    #gmb-boot .pulse {
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      border: 3px solid rgba(255, 77, 109, 0.35);
+      border-top-color: #FF4D6D;
+      animation: gmbspin 0.9s linear infinite;
+      margin-top: 8px;
+    }
+    @keyframes gmbspin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+  <div id="gmb-boot">
+    <div class="title">GetMeBack</div>
+    <div class="sub">V1A · Loading…</div>
+    <div class="pulse" aria-hidden="true"></div>
+  </div>
+  <script src="flutter_bootstrap.js" async></script>
+  <script>
+    window.addEventListener('flutter-first-frame', function () {
+      var el = document.getElementById('gmb-boot');
+      if (el) el.remove();
+    });
+  </script>
+</body>
+</html>

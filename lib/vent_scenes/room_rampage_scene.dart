@@ -15,6 +15,7 @@ import '../widgets/dramatic_fx.dart';
 import '../widgets/interactive_room_prop.dart';
 import '../widgets/prop_destruction_scars.dart';
 import '../widgets/prop_shatter_fx.dart';
+import '../widgets/smash_weapon_overlay.dart';
 import '../widgets/vent_scene_shell.dart';
 
 class RoomRampageScene extends StatefulWidget {
@@ -34,6 +35,12 @@ class RoomRampageScene extends StatefulWidget {
 class _RoomRampageSceneState extends BaseVentSceneState<RoomRampageScene> {
   final Set<String> _smashed = {};
   final Set<String> _smashing = {};
+  final Map<String, int> _damageStages = {};
+
+  SmashWeapon _selectedWeapon = SmashWeapon.hammer;
+  final List<WeaponStrikeInstance> _strikes = [];
+  int _strikeCounter = 0;
+
   String? _holdingId;
   String? _banner;
   bool _showCoach = true;
@@ -58,6 +65,18 @@ class _RoomRampageSceneState extends BaseVentSceneState<RoomRampageScene> {
     return null;
   }
 
+  int _maxHitsFor(RoomProp prop) {
+    if (prop.effectiveMaterial == PropMaterial.glass ||
+        prop.id.contains('glass') ||
+        prop.id.contains('cup') ||
+        prop.id.contains('mug') ||
+        prop.id.contains('bulb') ||
+        prop.id.contains('bottle')) {
+      return 2;
+    }
+    return 3;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -73,7 +92,7 @@ class _RoomRampageSceneState extends BaseVentSceneState<RoomRampageScene> {
       }
     });
     _setBanner(
-      'Tap the objects in the room to smash them',
+      'Select a demolition weapon & tap objects to smash',
     );
     SensorService.instance.start();
     _shakeSub = SensorService.instance.onShake.listen((_) => _earthquake());
@@ -117,6 +136,31 @@ class _RoomRampageSceneState extends BaseVentSceneState<RoomRampageScene> {
     });
   }
 
+  void _playWeaponAudio(SmashWeapon weapon, PropMaterial material) {
+    switch (weapon) {
+      case SmashWeapon.hammer:
+        VentSfx.instance.play(Sfx.smash);
+        VentSfx.heavy();
+        break;
+      case SmashWeapon.baseballBat:
+        VentSfx.instance.play(Sfx.hit);
+        VentSfx.medium();
+        break;
+      case SmashWeapon.laser:
+        VentSfx.instance.play(Sfx.zap);
+        VentSfx.light();
+        break;
+      case SmashWeapon.punch:
+        VentSfx.instance.play(Sfx.hit);
+        VentSfx.medium();
+        break;
+      case SmashWeapon.wreckingBall:
+        VentSfx.instance.play(Sfx.boom);
+        VentSfx.heavy();
+        break;
+    }
+  }
+
   void _playMaterial(PropMaterial material, PropSmashStyle style) {
     switch (material) {
       case PropMaterial.glass:
@@ -146,32 +190,22 @@ class _RoomRampageSceneState extends BaseVentSceneState<RoomRampageScene> {
     }
   }
 
-  void _playStyle(PropSmashStyle style, {PropMaterial? material}) {
-    if (material != null) {
-      _playMaterial(material, style);
-      return;
-    }
-    switch (style) {
-      case PropSmashStyle.shatter:
-      case PropSmashStyle.crack:
-        VentSfx.instance.play(Sfx.smash);
-        VentSfx.heavy();
-        break;
-      case PropSmashStyle.spill:
-      case PropSmashStyle.splash:
-        VentSfx.instance.play(Sfx.splash);
-        VentSfx.medium();
-        break;
-      case PropSmashStyle.explode:
-        VentSfx.instance.play(Sfx.boom);
-        VentSfx.heavy();
-        break;
-      case PropSmashStyle.tipOver:
-      case PropSmashStyle.smashFlat:
-        VentSfx.instance.play(Sfx.hit);
-        VentSfx.medium();
-        break;
-    }
+  void _spawnWeaponStrike(Offset pos) {
+    final strike = WeaponStrikeInstance(
+      id: ++_strikeCounter,
+      weapon: _selectedWeapon,
+      position: pos,
+      createdAt: DateTime.now(),
+    );
+    setState(() {
+      _strikes.add(strike);
+      _strikes.removeWhere((s) => s.isFinished);
+    });
+    Future.delayed(const Duration(milliseconds: 320), () {
+      if (mounted) {
+        setState(() => _strikes.removeWhere((s) => s.id == strike.id));
+      }
+    });
   }
 
   void _burst(Offset at, PropSmashStyle style, Color color, {RoomProp? prop}) {
@@ -251,7 +285,7 @@ class _RoomRampageSceneState extends BaseVentSceneState<RoomRampageScene> {
       if (_holdingId == prop.id) _holdingId = null;
     });
     if (banner != null) _setBanner(banner);
-    _playStyle(style, material: prop.effectiveMaterial);
+    _playMaterial(prop.effectiveMaterial, style);
     _burst(viewportCenter, style, prop.color, prop: prop);
     Future.delayed(const Duration(milliseconds: _smashJuiceMs), () {
       _finishSmash(prop, stageCenter, stage, style);
@@ -267,9 +301,12 @@ class _RoomRampageSceneState extends BaseVentSceneState<RoomRampageScene> {
     if (_smashed.contains(prop.id) || _smashing.contains(prop.id)) return;
     _dismissCoach();
 
+    // Spawn active weapon strike visual at tap coordinates
+    _spawnWeaponStrike(viewportCenter);
+
     final holding = _holding;
 
-    // Throw held item at this prop.
+    // Throw held item at this prop (instant combo smash)
     if (holding != null && holding.id != prop.id) {
       final reaction = prop.reactions[holding.id] ??
           (holding.id == 'glass' ||
@@ -299,8 +336,9 @@ class _RoomRampageSceneState extends BaseVentSceneState<RoomRampageScene> {
       return;
     }
 
-    // Pick up throwable (first tap) — does NOT smash yet.
-    if (prop.throwable && _holdingId == null) {
+    // Pick up throwable (first tap) if not yet damaged
+    final currentStage = _damageStages[prop.id] ?? 0;
+    if (prop.throwable && _holdingId == null && currentStage == 0) {
       setState(() => _holdingId = prop.id);
       VentSfx.light();
       VentSfx.instance.play(Sfx.whoosh);
@@ -308,19 +346,38 @@ class _RoomRampageSceneState extends BaseVentSceneState<RoomRampageScene> {
       return;
     }
 
-    // Direct smash with juice animation.
-    final quirks = <String>[
-      '${prop.label} smashed!',
-      'CRASH — ${prop.label}!',
-      '${prop.label} is gone!',
-    ];
-    _beginSmash(
-      prop,
-      stageCenter,
-      viewportCenter,
-      stage,
-      banner: quirks[_rng.nextInt(quirks.length)],
-    );
+    final maxHits = _maxHitsFor(prop);
+    final nextStage = currentStage + 1;
+    _damageStages[prop.id] = nextStage;
+
+    if (nextStage < maxHits) {
+      // Intermediate hit: Micro debris, crack decal, screen jolt
+      _playWeaponAudio(_selectedWeapon, prop.effectiveMaterial);
+      _shatter.microBurst(
+        at: viewportCenter,
+        color: prop.color,
+        style: prop.effectiveMaterial.shatterStyle,
+        count: 8,
+      );
+      fx.shakeBurst(amp: 10, duration: 0.18);
+      fx.impact(at: viewportCenter, count: 12, color: _selectedWeapon.color);
+      setState(() {});
+      _setBanner('${prop.label} cracking! ($nextStage/$maxHits hits)');
+    } else {
+      // Final hit: Full destruction shatter
+      final quirks = <String>[
+        '${prop.label} smashed to pieces!',
+        'CRASH — ${prop.label} obliterated!',
+        '${prop.label} is destroyed!',
+      ];
+      _beginSmash(
+        prop,
+        stageCenter,
+        viewportCenter,
+        stage,
+        banner: quirks[_rng.nextInt(quirks.length)],
+      );
+    }
   }
 
   void _maybeFinish(Offset center) {
@@ -357,14 +414,12 @@ class _RoomRampageSceneState extends BaseVentSceneState<RoomRampageScene> {
               ? 'Room wrecked. Nice.'
               : holding != null
                   ? 'THROW: tap another object in the room'
-                  : 'SMASH: tap objects directly · glass/cups pick up first',
+                  : 'SMASH: tap objects with ${_selectedWeapon.label}',
           showTarget: false,
           child: LayoutBuilder(
             builder: (context, constraints) {
               final viewport =
                   Size(constraints.maxWidth, constraints.maxHeight);
-              // Share one cover-fitted stage so props align to furniture.
-              // Room art is 1536×1024 (3:2).
               const roomAspect = 1.5;
               final stage = _coverStage(viewport, roomAspect);
               final stageOrigin = Offset(
@@ -375,10 +430,10 @@ class _RoomRampageSceneState extends BaseVentSceneState<RoomRampageScene> {
               _parallax = SensorService.instance.parallax;
               final props = List<RoomProp>.from(room.props)
                 ..sort((a, b) => a.effectiveZIndex.compareTo(b.effectiveZIndex));
+
               return Stack(
                 fit: StackFit.expand,
                 children: [
-                  // Letterbox behind cover crop
                   const ColoredBox(color: Color(0xFF0A0814)),
                   Positioned(
                     left: stageOrigin.dx + _parallax.dx,
@@ -443,6 +498,7 @@ class _RoomRampageSceneState extends BaseVentSceneState<RoomRampageScene> {
                                 ),
                               ),
                             ),
+                          // Top HUD
                           Positioned(
                             top: 6,
                             left: 10,
@@ -454,6 +510,7 @@ class _RoomRampageSceneState extends BaseVentSceneState<RoomRampageScene> {
                               holding: holding,
                             ),
                           ),
+                          // Interactive Room Props
                           Positioned(
                             left: stageOrigin.dx,
                             top: stageOrigin.dy,
@@ -470,6 +527,8 @@ class _RoomRampageSceneState extends BaseVentSceneState<RoomRampageScene> {
                                     pulse: _pulse,
                                     smashed: _smashed.contains(prop.id),
                                     smashing: _smashing.contains(prop.id),
+                                    damageStage: _damageStages[prop.id] ?? 0,
+                                    maxDamageStage: _maxHitsFor(prop),
                                     holding: _holdingId == prop.id,
                                     throwTarget: holding != null &&
                                         holding.id != prop.id &&
@@ -486,25 +545,35 @@ class _RoomRampageSceneState extends BaseVentSceneState<RoomRampageScene> {
                               ],
                             ),
                           ),
+                          // Animated Weapon Strike Overlays
+                          SmashWeaponOverlay(
+                            selectedWeapon: _selectedWeapon,
+                            onSelectWeapon: (w) => setState(() => _selectedWeapon = w),
+                            strikes: _strikes,
+                          ),
+                          // Bottom Floating Weapon Selector Bar
+                          Positioned(
+                            left: 0,
+                            right: 0,
+                            bottom: 12,
+                            child: Center(
+                              child: SmashWeaponSelectorBar(
+                                selectedWeapon: _selectedWeapon,
+                                onSelectWeapon: (w) {
+                                  setState(() => _selectedWeapon = w);
+                                  _setBanner('Equipped ${w.label}');
+                                  VentSfx.light();
+                                },
+                              ),
+                            ),
+                          ),
                           if (_banner != null)
                             Positioned(
                               left: 16,
                               right: 16,
-                              bottom: 56,
+                              bottom: 66,
                               child: IgnorePointer(
                                 child: _BannerChip(text: _banner!),
-                              ),
-                            ),
-                          if (!_cleared && _done > 0)
-                            Positioned(
-                              left: 12,
-                              right: 12,
-                              bottom: 12,
-                              child: IgnorePointer(
-                                child: _RemainingStrip(
-                                  room: room,
-                                  smashed: _smashed,
-                                ),
                               ),
                             ),
                           if (_showCoach)
@@ -526,14 +595,11 @@ class _RoomRampageSceneState extends BaseVentSceneState<RoomRampageScene> {
     );
   }
 
-  /// Stage size for BoxFit.cover of [imageAspect] into [viewport].
   static Size _coverStage(Size viewport, double imageAspect) {
     final viewAspect = viewport.width / viewport.height;
     if (viewAspect > imageAspect) {
-      // Viewport wider than image → fill width, crop top/bottom.
       return Size(viewport.width, viewport.width / imageAspect);
     }
-    // Viewport taller → fill height, crop sides.
     return Size(viewport.height * imageAspect, viewport.height);
   }
 }
@@ -555,9 +621,9 @@ class _HudBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.55),
+        color: Colors.black.withValues(alpha: 0.65),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppTheme.gold.withValues(alpha: 0.35)),
+        border: Border.all(color: AppTheme.gold.withValues(alpha: 0.4)),
       ),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -568,8 +634,8 @@ class _HudBar extends StatelessWidget {
             Expanded(
               child: Text(
                 holding == null
-                    ? 'Tap objects to smash'
-                    : 'Holding ${holding!.label} — tap a target',
+                    ? '${room.name} — Smash each object'
+                    : 'Holding ${holding!.label} — tap target to throw',
                 style: const TextStyle(
                   fontWeight: FontWeight.w700,
                   fontSize: 13,
@@ -577,90 +643,11 @@ class _HudBar extends StatelessWidget {
               ),
             ),
             Text(
-              '$done/$total',
+              '$done/$total cleared',
               style: const TextStyle(
                 fontWeight: FontWeight.w800,
                 color: AppTheme.gold,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _RemainingStrip extends StatelessWidget {
-  const _RemainingStrip({
-    required this.room,
-    required this.smashed,
-  });
-
-  final RoomSetup room;
-  final Set<String> smashed;
-
-  @override
-  Widget build(BuildContext context) {
-    final left = room.props.where((p) => !smashed.contains(p.id)).toList();
-    if (left.isEmpty) return const SizedBox.shrink();
-
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.55),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-        child: Row(
-          children: [
-            Text(
-              '${left.length} left',
-              style: const TextStyle(
-                fontWeight: FontWeight.w800,
-                fontSize: 11,
-                color: AppTheme.gold,
-              ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  children: [
-                    for (final p in left.take(8))
-                      Padding(
-                        padding: const EdgeInsets.only(right: 6),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(10),
-                            color: p.color.withValues(alpha: 0.35),
-                            border: Border.all(
-                              color: Colors.white.withValues(alpha: 0.25),
-                            ),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(p.icon, size: 12, color: Colors.white),
-                              const SizedBox(width: 4),
-                              Text(
-                                p.label,
-                                style: const TextStyle(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
+                fontSize: 12,
               ),
             ),
           ],
@@ -679,16 +666,16 @@ class _BannerChip extends StatelessWidget {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.72),
+        color: Colors.black.withValues(alpha: 0.78),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppTheme.gold.withValues(alpha: 0.5)),
+        border: Border.all(color: AppTheme.gold.withValues(alpha: 0.55)),
       ),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         child: Text(
           text,
           textAlign: TextAlign.center,
-          style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
+          style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14),
         ),
       ),
     );
@@ -703,7 +690,7 @@ class _CoachOverlay extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: Colors.black.withValues(alpha: 0.62),
+      color: Colors.black.withValues(alpha: 0.68),
       child: SafeArea(
         child: Center(
           child: ConstrainedBox(
@@ -723,31 +710,39 @@ class _CoachOverlay extends StatelessWidget {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.touch_app, color: AppTheme.gold, size: 42),
+                      const Icon(Icons.handyman, color: AppTheme.gold, size: 44),
                       const SizedBox(height: 12),
                       const Text(
-                        'How Room Rampage works',
+                        'Realistic Room Demolition',
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           fontWeight: FontWeight.w800,
                           fontSize: 20,
                         ),
                       ),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 14),
                       _tip(
-                        Icons.flash_on,
-                        'Tap the real objects — plates, glasses, chairs',
+                        Icons.gavel,
+                        'Pick your weapon below (Hammer, Bat, Laser, Fist, Wrecking Ball)',
                       ),
-                      _tip(Icons.back_hand, 'Glass / cups: first tap = pick up'),
-                      _tip(Icons.sports_handball,
-                          'Then TAP another object to throw & react'),
-                      _tip(Icons.block, 'Empty background never smashes itself'),
+                      _tip(
+                        Icons.touch_app,
+                        'Tap objects to crack them progressively before final shatter',
+                      ),
+                      _tip(
+                        Icons.back_hand,
+                        'Glass / cups can also be thrown at other room objects',
+                      ),
+                      _tip(
+                        Icons.spa,
+                        'Clearing the room unlocks the soothing Cool Down reset',
+                      ),
                       const SizedBox(height: 16),
                       SizedBox(
                         width: double.infinity,
                         child: FilledButton(
                           onPressed: onGotIt,
-                          child: const Text('Got it — smash away'),
+                          child: const Text('Start Demolition'),
                         ),
                       ),
                     ],
@@ -775,6 +770,7 @@ class _CoachOverlay extends StatelessWidget {
               style: TextStyle(
                 height: 1.3,
                 color: Colors.white.withValues(alpha: 0.9),
+                fontSize: 13,
               ),
             ),
           ),

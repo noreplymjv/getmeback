@@ -19,7 +19,7 @@ class PropShatterShard {
     required this.style,
     this.rotation = 0,
     this.spin = 0,
-    this.gravity = 820,
+    this.gravity = 840,
     this.drag = 0.988,
     this.vertices = const [],
     this.aspect = 1,
@@ -43,7 +43,7 @@ class PropShatterShard {
     if (floorY != null && y >= floorY) {
       y = floorY;
       if (vy.abs() > 40) {
-        vy = -vy * 0.38;
+        vy = -vy * 0.38; // Bounce off surface
         vx *= 0.72;
         spin *= 0.85;
       } else {
@@ -65,6 +65,7 @@ class PropShatterController extends ChangeNotifier {
   /// Stage Y coordinate for floor collision (null = no floor).
   double? floorY;
 
+  /// Full complete shatter burst.
   void burst({
     required Offset at,
     Color color = const Color(0xFFECEFF1),
@@ -97,7 +98,42 @@ class PropShatterController extends ChangeNotifier {
           gravity: cfg.gravity,
           drag: cfg.drag,
           vertices: _verts(style),
-          aspect: style == PropShatterStyle.wood ? 0.55 + _rng.nextDouble() * 0.35 : 1,
+          aspect: style == PropShatterStyle.wood ? 0.45 + _rng.nextDouble() * 0.4 : 1,
+        ),
+      );
+    }
+    notifyListeners();
+  }
+
+  /// Micro burst for intermediate impacts before complete destruction.
+  void microBurst({
+    required Offset at,
+    Color color = Colors.white,
+    PropShatterStyle style = PropShatterStyle.ceramic,
+    int count = 6,
+  }) {
+    final cfg = _cfg(style);
+    for (var i = 0; i < count; i++) {
+      final angle = _rng.nextDouble() * pi * 2;
+      final speed = (cfg.minSpeed * 0.7) + _rng.nextDouble() * (cfg.speedRange * 0.5);
+      final life = 0.4 + _rng.nextDouble() * 0.35;
+      shards.add(
+        PropShatterShard(
+          x: at.dx + (_rng.nextDouble() - 0.5) * 10,
+          y: at.dy + (_rng.nextDouble() - 0.5) * 10,
+          vx: cos(angle) * speed,
+          vy: sin(angle) * speed - 60,
+          size: (cfg.minSize * 0.6) + _rng.nextDouble() * 4,
+          color: _tint(color, style),
+          life: life,
+          maxLife: life,
+          style: style,
+          rotation: _rng.nextDouble() * pi,
+          spin: (_rng.nextDouble() - 0.5) * 18,
+          gravity: cfg.gravity,
+          drag: cfg.drag,
+          vertices: _verts(style),
+          aspect: style == PropShatterStyle.wood ? 0.5 : 1,
         ),
       );
     }
@@ -128,28 +164,28 @@ class PropShatterController extends ChangeNotifier {
 
   static _ShardCfg _cfg(PropShatterStyle s) => switch (s) {
         PropShatterStyle.glass => const _ShardCfg(
-            minSpeed: 180, speedRange: 420, lift: 140, minSize: 6, sizeRange: 14,
-            life: 0.9, lifeVar: 0.5, spin: 14, gravity: 760, drag: 0.992, spread: 18,
+            minSpeed: 200, speedRange: 460, lift: 150, minSize: 6, sizeRange: 16,
+            life: 1.0, lifeVar: 0.5, spin: 16, gravity: 780, drag: 0.992, spread: 18,
           ),
         PropShatterStyle.ceramic => const _ShardCfg(
-            minSpeed: 160, speedRange: 380, lift: 120, minSize: 7, sizeRange: 16,
-            life: 1.1, lifeVar: 0.6, spin: 12, gravity: 880, drag: 0.988, spread: 22,
+            minSpeed: 170, speedRange: 400, lift: 130, minSize: 8, sizeRange: 18,
+            life: 1.2, lifeVar: 0.6, spin: 14, gravity: 890, drag: 0.988, spread: 22,
           ),
         PropShatterStyle.wood => const _ShardCfg(
-            minSpeed: 120, speedRange: 280, lift: 80, minSize: 8, sizeRange: 18,
-            life: 1.3, lifeVar: 0.7, spin: 8, gravity: 920, drag: 0.985, spread: 26,
+            minSpeed: 130, speedRange: 300, lift: 90, minSize: 9, sizeRange: 20,
+            life: 1.4, lifeVar: 0.7, spin: 9, gravity: 920, drag: 0.985, spread: 26,
           ),
         PropShatterStyle.metal => const _ShardCfg(
-            minSpeed: 260, speedRange: 520, lift: 60, minSize: 2, sizeRange: 5,
-            life: 0.35, lifeVar: 0.25, spin: 22, gravity: 420, drag: 0.975, spread: 10,
+            minSpeed: 280, speedRange: 560, lift: 80, minSize: 3, sizeRange: 7,
+            life: 0.45, lifeVar: 0.3, spin: 24, gravity: 460, drag: 0.975, spread: 12,
           ),
       };
 
   Color _tint(Color base, PropShatterStyle style) {
     final t = _rng.nextDouble();
     return switch (style) {
-      PropShatterStyle.glass => Color.lerp(base, Colors.white, 0.35 + t * 0.35)!,
-      PropShatterStyle.ceramic => Color.lerp(base, const Color(0xFFBCAAA4), t * 0.25)!,
+      PropShatterStyle.glass => Color.lerp(base, Colors.white, 0.4 + t * 0.4)!,
+      PropShatterStyle.ceramic => Color.lerp(base, const Color(0xFFBCAAA4), t * 0.3)!,
       PropShatterStyle.wood => Color.lerp(
           base,
           Color.lerp(const Color(0xFF6D4C41), const Color(0xFF8D6E63), t)!,
@@ -167,16 +203,16 @@ class PropShatterController extends ChangeNotifier {
     switch (style) {
       case PropShatterStyle.glass:
         return [
-          Offset(0, -1),
-          Offset(0.45 + _rng.nextDouble() * 0.15, 0.55),
-          Offset(-0.45 - _rng.nextDouble() * 0.15, 0.55),
+          const Offset(0, -1),
+          Offset(0.45 + _rng.nextDouble() * 0.2, 0.55),
+          Offset(-0.45 - _rng.nextDouble() * 0.2, 0.55),
         ];
       case PropShatterStyle.ceramic:
         return [
           Offset(-0.5 - _rng.nextDouble() * 0.2, -0.4),
           Offset(0.5 + _rng.nextDouble() * 0.15, -0.35),
-          Offset(0.45, 0.5),
-          Offset(-0.45, 0.45),
+          const Offset(0.45, 0.5),
+          const Offset(-0.45, 0.45),
         ];
       case PropShatterStyle.wood:
         return [
@@ -245,9 +281,9 @@ class _PropShatterPainter extends CustomPainter {
       canvas.rotate(s.rotation);
       switch (s.style) {
         case PropShatterStyle.glass:
-          _poly(canvas, s, a * 0.55, stroke: Colors.white.withValues(alpha: a * 0.35));
+          _poly(canvas, s, a * 0.65, stroke: Colors.white.withValues(alpha: a * 0.45));
         case PropShatterStyle.ceramic:
-          _poly(canvas, s, a);
+          _poly(canvas, s, a, stroke: Colors.white.withValues(alpha: a * 0.2));
         case PropShatterStyle.wood:
           final paint = Paint()..color = s.color.withValues(alpha: a);
           canvas.drawRRect(
@@ -260,7 +296,7 @@ class _PropShatterPainter extends CustomPainter {
         case PropShatterStyle.metal:
           final paint = Paint()
             ..color = s.color.withValues(alpha: a)
-            ..strokeWidth = 1.5 + s.size * 0.3
+            ..strokeWidth = 1.8 + s.size * 0.3
             ..strokeCap = StrokeCap.round
             ..style = PaintingStyle.stroke;
           final len = s.size * 2.2;
@@ -290,7 +326,7 @@ class _PropShatterPainter extends CustomPainter {
         Paint()
           ..color = stroke
           ..style = PaintingStyle.stroke
-          ..strokeWidth = 0.8,
+          ..strokeWidth = 0.9,
       );
     }
   }
