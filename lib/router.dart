@@ -151,6 +151,7 @@ class _VentSceneLoader extends StatefulWidget {
 
 class _VentSceneLoaderState extends State<_VentSceneLoader> {
   VentTarget? _target;
+  bool _loading = true;
 
   @override
   void initState() {
@@ -159,16 +160,45 @@ class _VentSceneLoaderState extends State<_VentSceneLoader> {
   }
 
   Future<void> _load() async {
-    final targets = await StorageService.instance.loadTargets();
-    final target = targets.where((t) => t.id == widget.targetId).firstOrNull;
-    if (mounted) setState(() => _target = target);
+    VentTarget? target;
+    if (widget.targetId == 'room_guest') {
+      target = roomGuestTarget;
+    } else {
+      final targets = await StorageService.instance.loadTargets();
+      target = targets.where((t) => t.id == widget.targetId).firstOrNull;
+    }
+    if (mounted) {
+      setState(() {
+        _target = target;
+        _loading = false;
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_target == null) {
+    if (_loading) {
       return const Scaffold(
         body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (_target == null) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Character Not Found')),
+        body: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('Character not found', style: TextStyle(fontSize: 16)),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: () => context.go('/characters'),
+                child: const Text('Choose Character'),
+              ),
+            ],
+          ),
+        ),
       );
     }
 
@@ -178,8 +208,20 @@ class _VentSceneLoaderState extends State<_VentSceneLoader> {
 
     if (type == null) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Unknown action')),
-        body: const Center(child: Text('Vent action not found')),
+        appBar: AppBar(title: const Text('Unknown Action')),
+        body: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('Vent action not found', style: TextStyle(fontSize: 16)),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: () => context.go('/vent-menu/${widget.targetId}'),
+                child: const Text('Back to Vent Menu'),
+              ),
+            ],
+          ),
+        ),
       );
     }
 
@@ -228,6 +270,7 @@ class _RoomRampageLoader extends StatefulWidget {
 class _RoomRampageLoaderState extends State<_RoomRampageLoader> {
   VentTarget? _target;
   RoomSetup? _room;
+  bool _loading = true;
 
   @override
   void initState() {
@@ -248,13 +291,14 @@ class _RoomRampageLoaderState extends State<_RoomRampageLoader> {
       setState(() {
         _target = target;
         _room = room;
+        _loading = false;
       });
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_target == null && _room == null) {
+    if (_loading) {
       return const Scaffold(
         body: Center(child: CircularProgressIndicator()),
       );
@@ -262,7 +306,19 @@ class _RoomRampageLoaderState extends State<_RoomRampageLoader> {
     if (_target == null || _room == null) {
       return Scaffold(
         appBar: AppBar(title: const Text('Room Rampage')),
-        body: const Center(child: Text('Room or target not found')),
+        body: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(_target == null ? 'Character not found' : 'Room not found'),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: () => context.go('/rooms'),
+                child: const Text('Pick a Room'),
+              ),
+            ],
+          ),
+        ),
       );
     }
     return RoomRampageScene(target: _target!, room: _room!);

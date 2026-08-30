@@ -10,14 +10,6 @@ import '../widgets/premium_chrome.dart';
 import '../widgets/responsive_columns.dart';
 import '../widgets/target_avatar.dart';
 
-/// Guest used when entering Rooms without a saved character.
-VentTarget get roomGuestTarget => VentTarget(
-      id: 'room_guest',
-      name: 'Room Mode',
-      presetId: 'grumpy_cat',
-      createdAt: DateTime(2026),
-    );
-
 class RoomPickerScreen extends StatefulWidget {
   const RoomPickerScreen({super.key, this.targetId});
 

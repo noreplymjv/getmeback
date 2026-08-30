@@ -22,6 +22,7 @@ class VentMenuScreen extends StatefulWidget {
 
 class _VentMenuScreenState extends State<VentMenuScreen> {
   VentTarget? _target;
+  bool _loading = true;
 
   @override
   void initState() {
@@ -30,20 +31,100 @@ class _VentMenuScreenState extends State<VentMenuScreen> {
   }
 
   Future<void> _loadTarget() async {
-    final targets = await StorageService.instance.loadTargets();
-    final target = targets.where((t) => t.id == widget.targetId).firstOrNull;
+    VentTarget? target;
+    if (widget.targetId == 'room_guest') {
+      target = roomGuestTarget;
+    } else {
+      final targets = await StorageService.instance.loadTargets();
+      target = targets.where((t) => t.id == widget.targetId).firstOrNull;
+    }
     if (target != null) {
       TargetImage.preloadTarget(target);
     }
-    if (mounted) setState(() => _target = target);
+    if (mounted) {
+      setState(() {
+        _target = target;
+        _loading = false;
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_target == null) {
+    if (_loading) {
       return const Scaffold(
         body: PremiumBackdrop(
           child: Center(child: CircularProgressIndicator()),
+        ),
+      );
+    }
+
+    if (_target == null) {
+      return Scaffold(
+        extendBodyBehindAppBar: true,
+        appBar: AppBar(
+          title: const Text('Character Not Found'),
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () {
+              if (context.canPop()) {
+                context.pop();
+              } else {
+                context.go('/characters');
+              }
+            },
+          ),
+        ),
+        body: PremiumBackdrop(
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 360),
+              child: GlassPanel(
+                goldEdge: true,
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.person_off_rounded,
+                      size: 54,
+                      color: AppTheme.gold,
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Character Not Found',
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'This character might have been removed or the link is invalid.',
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: AppTheme.textSecondary,
+                          ),
+                    ),
+                    const SizedBox(height: 20),
+                    ShineButton(
+                      label: 'Choose Character',
+                      icon: Icons.people_rounded,
+                      onPressed: () => context.go('/characters'),
+                    ),
+                    const SizedBox(height: 10),
+                    TextButton(
+                      onPressed: () => context.go('/'),
+                      child: const Text(
+                        'Go Home',
+                        style: TextStyle(color: AppTheme.goldSoft),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
         ),
       );
     }

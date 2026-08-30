@@ -43,4 +43,16 @@ class VentTarget {
         .map((e) => VentTarget.fromJson(e as Map<String, dynamic>))
         .toList();
   }
+
+  /// Default guest target when entering without a saved character.
+  static VentTarget get roomGuest => VentTarget(
+        id: 'room_guest',
+        name: 'Guest',
+        presetId: 'grumpy_cat',
+        createdAt: DateTime(2026),
+      );
 }
+
+/// Global convenience accessor for the guest target.
+VentTarget get roomGuestTarget => VentTarget.roomGuest;
+
