@@ -8,6 +8,7 @@ import '../models/prop_state.dart';
 import '../models/room_setup.dart';
 import '../models/vent_target.dart';
 import '../services/sensor_service.dart';
+import '../services/storage_service.dart';
 import '../services/vent_sfx.dart';
 import '../theme/app_theme.dart';
 import '../widgets/base_vent_scene.dart';
@@ -165,23 +166,19 @@ class _RoomRampageSceneState extends BaseVentSceneState<RoomRampageScene> {
     switch (material) {
       case PropMaterial.glass:
         VentSfx.instance.play(Sfx.crack);
-        VentSfx.light();
       case PropMaterial.ceramic:
         VentSfx.instance.play(Sfx.smash);
-        VentSfx.heavy();
       case PropMaterial.wood:
         VentSfx.instance.play(Sfx.hit);
-        VentSfx.medium();
       case PropMaterial.metal:
         VentSfx.instance.play(Sfx.zap);
-        VentSfx.medium();
       case PropMaterial.plastic:
         VentSfx.instance.play(Sfx.pop);
-        VentSfx.light();
       case PropMaterial.fabric:
         VentSfx.instance.play(Sfx.whoosh);
-        VentSfx.light();
     }
+    // ignore: unawaited_futures
+    VentSfx.material(material);
     if (style == PropSmashStyle.spill || style == PropSmashStyle.splash) {
       VentSfx.instance.play(Sfx.splash);
     } else if (style == PropSmashStyle.explode) {
@@ -285,8 +282,15 @@ class _RoomRampageSceneState extends BaseVentSceneState<RoomRampageScene> {
       if (_holdingId == prop.id) _holdingId = null;
     });
     if (banner != null) _setBanner(banner);
-    _playMaterial(prop.effectiveMaterial, style);
-    _burst(viewportCenter, style, prop.color, prop: prop);
+    final material = prop.effectiveMaterial;
+    fx.triggerHitStop(material.hitStop);
+    _playMaterial(material, style);
+    if (!StorageService.instance.reducedFxEnabled) {
+      _burst(viewportCenter, style, prop.color, prop: prop);
+    } else {
+      // Softened juice when Reduce motion is on.
+      fx.impact(at: viewportCenter, count: 12, intensity: 0.7, color: prop.color);
+    }
     Future.delayed(const Duration(milliseconds: _smashJuiceMs), () {
       _finishSmash(prop, stageCenter, stage, style);
     });
