@@ -44,6 +44,7 @@ class _CalmOutroScreenState extends State<CalmOutroScreen>
     _loadStreak();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
+      if (StorageService.instance.reducedFxEnabled) return;
       final size = MediaQuery.sizeOf(context);
       final center = Offset(size.width / 2, size.height * 0.42);
       VentSfx.instance.play(Sfx.confetti);
@@ -61,7 +62,19 @@ class _CalmOutroScreenState extends State<CalmOutroScreen>
     final entry = await showMicroJournalDialog(context);
     if (!mounted) return;
     if (entry != null) {
-      await StorageService.instance.saveJournalEntry(entry);
+      await StorageService.instance.saveJournalEntry(
+        entry.text,
+        mood: entry.mood,
+      );
+      if (!mounted) return;
+      // Micro text-shredder moment — release the note, then leave.
+      VentSfx.instance.play(Sfx.shred);
+      if (!StorageService.instance.reducedFxEnabled) {
+        final size = MediaQuery.sizeOf(context);
+        final center = Offset(size.width / 2, size.height * 0.5);
+        _fx.impact(at: center, count: 18, intensity: 0.9, color: AppTheme.calm);
+      }
+      await Future<void>.delayed(const Duration(milliseconds: 420));
     }
     if (!mounted) return;
     context.go('/');
@@ -168,14 +181,18 @@ class _CalmOutroScreenState extends State<CalmOutroScreen>
                           onPressed: _finish,
                         ),
                         const SizedBox(height: 8),
-                        TextButton(
-                          onPressed: () =>
-                              context.go('/vent-menu/${widget.targetId}'),
-                          child: const Text(
-                            'Vent again',
-                            style: TextStyle(
-                              color: AppTheme.gold,
-                              fontWeight: FontWeight.w700,
+                        Semantics(
+                          button: true,
+                          label: 'Vent again with this character',
+                          child: TextButton(
+                            onPressed: () =>
+                                context.go('/vent-menu/${widget.targetId}'),
+                            child: const Text(
+                              'Vent again',
+                              style: TextStyle(
+                                color: AppTheme.gold,
+                                fontWeight: FontWeight.w700,
+                              ),
                             ),
                           ),
                         ),

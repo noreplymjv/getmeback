@@ -1,6 +1,9 @@
+import 'dart:math';
+
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/services.dart';
 
+import '../models/prop_state.dart';
 import 'storage_service.dart';
 
 enum Sfx {
@@ -79,6 +82,9 @@ class VentSfx {
     // Round-robin pool — avoid stop()->play() on the same player every time.
     final player = _pool[_next % _pool.length];
     _next++;
+    // Subtle dynamic pitch shifting (+-10%) to prevent sound fatigue during intense tapping
+    final randomRate = 0.92 + (Random().nextDouble() * 0.16);
+    player.setPlaybackRate(randomRate).catchError((_) {});
     player.play(AssetSource('sfx/${sfx.name}.wav')).catchError((_) {});
   }
 
@@ -106,5 +112,32 @@ class VentSfx {
     HapticFeedback.mediumImpact();
     await Future<void>.delayed(const Duration(milliseconds: 60));
     HapticFeedback.heavyImpact();
+  }
+
+  /// Material-tuned haptic pulse (Flutter intensity tiers; not Core Haptics).
+  static Future<void> material(PropMaterial material) async {
+    if (!_hapticsOn) return;
+    switch (material) {
+      case PropMaterial.glass:
+        HapticFeedback.lightImpact();
+        await Future<void>.delayed(const Duration(milliseconds: 28));
+        HapticFeedback.selectionClick();
+      case PropMaterial.ceramic:
+        HapticFeedback.mediumImpact();
+        await Future<void>.delayed(const Duration(milliseconds: 35));
+        HapticFeedback.heavyImpact();
+      case PropMaterial.wood:
+        HapticFeedback.mediumImpact();
+      case PropMaterial.metal:
+        HapticFeedback.heavyImpact();
+        await Future<void>.delayed(const Duration(milliseconds: 40));
+        HapticFeedback.mediumImpact();
+      case PropMaterial.plastic:
+        HapticFeedback.selectionClick();
+        await Future<void>.delayed(const Duration(milliseconds: 20));
+        HapticFeedback.lightImpact();
+      case PropMaterial.fabric:
+        HapticFeedback.selectionClick();
+    }
   }
 }

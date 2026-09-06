@@ -5,6 +5,20 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/vent_target.dart';
 import '../utils/target_image.dart';
 
+/// One micro-journal line after calm.
+class JournalEntry {
+  const JournalEntry({
+    required this.at,
+    required this.text,
+    this.mood,
+  });
+
+  final DateTime at;
+  final String text;
+  /// Optional mood tag: lighter | calm | tired | tense | mixed
+  final String? mood;
+}
+
 class StorageService {
   StorageService._();
   static final StorageService instance = StorageService._();
@@ -12,10 +26,12 @@ class StorageService {
   static const _targetsKey = 'vent_targets';
   static const _hapticsKey = 'haptics_enabled';
   static const _sfxKey = 'sfx_enabled';
+  static const _reducedFxKey = 'reduced_fx_enabled';
   static const _zenStreakKey = 'zen_streak_count';
   static const _zenLastCalmKey = 'zen_streak_last_calm';
   static const _journalKey = 'micro_journal_entries';
   static const _secureMigratedKey = 'vent_targets_secure_migrated';
+  static const _journalSecureMigratedKey = 'micro_journal_secure_migrated';
 
   static const _secure = FlutterSecureStorage(
     aOptions: AndroidOptions(encryptedSharedPreferences: true),
@@ -27,10 +43,14 @@ class StorageService {
   bool _sfxEnabled = true;
   bool get sfxEnabled => _sfxEnabled;
 
+  bool _reducedFxEnabled = false;
+  bool get reducedFxEnabled => _reducedFxEnabled;
+
   Future<void> loadSettings() async {
     final prefs = await SharedPreferences.getInstance();
     _hapticsEnabled = prefs.getBool(_hapticsKey) ?? true;
     _sfxEnabled = prefs.getBool(_sfxKey) ?? true;
+    _reducedFxEnabled = prefs.getBool(_reducedFxKey) ?? false;
   }
 
   Future<void> setHapticsEnabled(bool enabled) async {
@@ -43,6 +63,12 @@ class StorageService {
     _sfxEnabled = enabled;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_sfxKey, enabled);
+  }
+
+  Future<void> setReducedFxEnabled(bool enabled) async {
+    _reducedFxEnabled = enabled;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_reducedFxKey, enabled);
   }
 
   String _todayKey([DateTime? when]) {
@@ -86,31 +112,103 @@ class StorageService {
     return streak;
   }
 
-  Future<void> saveJournalEntry(String text) async {
-    if (text.trim().isEmpty) return;
-    final prefs = await SharedPreferences.getInstance();
-    final existing = prefs.getStringList(_journalKey) ?? [];
-    existing.insert(0, '${DateTime.now().toIso8601String()}|$text');
-    if (existing.length > 30) existing.removeRange(30, existing.length);
-    await prefs.setStringList(_journalKey, existing);
+  /// Encode: `iso|mood|text` (mood may be empty). Legacy `iso|text` still loads.
+  String _encodeJournalLine(JournalEntry e) {
+    final mood = e.mood?.trim() ?? '';
+    return '${e.at.toIso8601String()}|$mood|${e.text}';
   }
 
-  /// Recent journal lines stored as `iso8601|text`.
-  Future<List<({DateTime at, String text})>> loadJournalEntries() async {
-    final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getStringList(_journalKey) ?? [];
-    final out = <({DateTime at, String text})>[];
+  JournalEntry? _parseJournalLine(String line) {
+    final first = line.indexOf('|');
+    if (first <= 0) return null;
+    final at = DateTime.tryParse(line.substring(0, first));
+    if (at == null) return null;
+    final rest = line.substring(first + 1);
+    final second = rest.indexOf('|');
+    if (second < 0) {
+      // Legacy: iso|text
+      return JournalEntry(at: at, text: rest);
+    }
+    final moodRaw = rest.substring(0, second).trim();
+    final text = rest.substring(second + 1);
+    return JournalEntry(
+      at: at,
+      text: text,
+      mood: moodRaw.isEmpty ? null : moodRaw,
+    );
+  }
+
+  Future<void> saveJournalEntry(String text, {String? mood}) async {
+    if (text.trim().isEmpty && (mood == null || mood.trim().isEmpty)) return;
+    final body = text.trim().isEmpty ? (mood ?? '') : text.trim();
+    final entry = JournalEntry(
+      at: DateTime.now(),
+      text: body,
+      mood: mood?.trim().isEmpty == true ? null : mood?.trim(),
+    );
+    final existing = await _readJournalRaw();
+    existing.insert(0, _encodeJournalLine(entry));
+    if (existing.length > 30) existing.removeRange(30, existing.length);
+    await _writeJournalRaw(existing);
+  }
+
+  /// Recent journal lines.
+  Future<List<JournalEntry>> loadJournalEntries() async {
+    final raw = await _readJournalRaw();
+    final out = <JournalEntry>[];
     for (final line in raw) {
-      final sep = line.indexOf('|');
-      if (sep <= 0) continue;
-      final at = DateTime.tryParse(line.substring(0, sep));
-      if (at == null) continue;
-      out.add((at: at, text: line.substring(sep + 1)));
+      final parsed = _parseJournalLine(line);
+      if (parsed != null) out.add(parsed);
     }
     return out;
   }
 
-  /// Wipe targets, journal, and zen streak. Keeps haptics/SFX toggles.
+  Future<List<String>> _readJournalRaw() async {
+    if (!kIsWeb) {
+      try {
+        await _migrateJournalToSecureIfNeeded();
+        final raw = await _secure.read(key: _journalKey);
+        if (raw != null && raw.isNotEmpty) {
+          return raw.split('\n').where((e) => e.isNotEmpty).toList();
+        }
+      } catch (_) {
+        // Fall through to prefs.
+      }
+    }
+    final prefs = await SharedPreferences.getInstance();
+    return List<String>.from(prefs.getStringList(_journalKey) ?? const []);
+  }
+
+  Future<void> _writeJournalRaw(List<String> lines) async {
+    final joined = lines.join('\n');
+    if (kIsWeb) {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setStringList(_journalKey, lines);
+      return;
+    }
+    try {
+      await _secure.write(key: _journalKey, value: joined);
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(_journalKey);
+    } catch (_) {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setStringList(_journalKey, lines);
+    }
+  }
+
+  Future<void> _migrateJournalToSecureIfNeeded() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (prefs.getBool(_journalSecureMigratedKey) == true) return;
+
+    final legacy = prefs.getStringList(_journalKey);
+    if (legacy != null && legacy.isNotEmpty) {
+      await _secure.write(key: _journalKey, value: legacy.join('\n'));
+      await prefs.remove(_journalKey);
+    }
+    await prefs.setBool(_journalSecureMigratedKey, true);
+  }
+
+  /// Wipe targets, journal, and zen streak. Keeps haptics/SFX/reduced-FX toggles.
   Future<void> clearAllLocalData() async {
     final targets = await loadTargets();
     for (final t in List<VentTarget>.from(targets)) {
@@ -122,6 +220,11 @@ class StorageService {
     await prefs.remove(_journalKey);
     await prefs.remove(_zenStreakKey);
     await prefs.remove(_zenLastCalmKey);
+    if (!kIsWeb) {
+      try {
+        await _secure.delete(key: _journalKey);
+      } catch (_) {}
+    }
   }
 
   Future<List<VentTarget>> loadTargets() async {

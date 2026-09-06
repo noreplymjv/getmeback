@@ -21,11 +21,21 @@ extension PropMaterialShatter on PropMaterial {
       };
 
   int get shardCount => switch (this) {
-        PropMaterial.glass => 32,
-        PropMaterial.ceramic => 24,
+        PropMaterial.glass => 40,
+        PropMaterial.ceramic => 28,
         PropMaterial.wood => 18,
-        PropMaterial.metal => 22,
-        PropMaterial.plastic => 20,
+        PropMaterial.metal => 24,
+        PropMaterial.plastic => 22,
         PropMaterial.fabric => 14,
+      };
+
+  /// Micro freeze-frame length tuned per material (fighting-game style hit-stop).
+  Duration get hitStop => switch (this) {
+        PropMaterial.glass => const Duration(milliseconds: 28),
+        PropMaterial.ceramic => const Duration(milliseconds: 36),
+        PropMaterial.wood => const Duration(milliseconds: 32),
+        PropMaterial.metal => const Duration(milliseconds: 42),
+        PropMaterial.plastic => const Duration(milliseconds: 30),
+        PropMaterial.fabric => const Duration(milliseconds: 22),
       };
 }

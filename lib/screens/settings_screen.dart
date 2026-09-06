@@ -16,7 +16,7 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   int _zenStreak = 0;
-  List<({DateTime at, String text})> _journal = [];
+  List<JournalEntry> _journal = [];
   bool _loading = true;
 
   @override
@@ -131,7 +131,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 SwitchListTile(
                                   contentPadding: EdgeInsets.zero,
                                   title: const Text('Haptics'),
-                                  subtitle: const Text('Vibration on hits & taps'),
+                                  subtitle:
+                                      const Text('Vibration on hits & taps'),
                                   value: storage.hapticsEnabled,
                                   activeThumbColor: AppTheme.gold,
                                   onChanged: (v) async {
@@ -143,11 +144,25 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 SwitchListTile(
                                   contentPadding: EdgeInsets.zero,
                                   title: const Text('Sound effects'),
-                                  subtitle: const Text('Cartoon SFX during vents'),
+                                  subtitle:
+                                      const Text('Cartoon SFX during vents'),
                                   value: storage.sfxEnabled,
                                   activeThumbColor: AppTheme.gold,
                                   onChanged: (v) async {
                                     await storage.setSfxEnabled(v);
+                                    if (mounted) setState(() {});
+                                  },
+                                ),
+                                SwitchListTile(
+                                  contentPadding: EdgeInsets.zero,
+                                  title: const Text('Reduce motion'),
+                                  subtitle: const Text(
+                                    'Softer smash juice & calm outro FX',
+                                  ),
+                                  value: storage.reducedFxEnabled,
+                                  activeThumbColor: AppTheme.gold,
+                                  onChanged: (v) async {
+                                    await storage.setReducedFxEnabled(v);
                                     if (mounted) setState(() {});
                                   },
                                 ),
@@ -218,7 +233,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
-                                  'Last 10 notes from calm outros',
+                                  'Last 10 notes from calm outros (encrypted on device)',
                                   style: Theme.of(context)
                                       .textTheme
                                       .bodySmall
@@ -240,7 +255,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 else
                                   ..._journal.map(
                                     (e) => Padding(
-                                      padding: const EdgeInsets.only(bottom: 10),
+                                      padding:
+                                          const EdgeInsets.only(bottom: 10),
                                       child: Column(
                                         crossAxisAlignment:
                                             CrossAxisAlignment.start,
@@ -255,6 +271,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                                   fontWeight: FontWeight.w700,
                                                 ),
                                           ),
+                                          if (e.mood != null) ...[
+                                            const SizedBox(height: 2),
+                                            Text(
+                                              e.mood!,
+                                              style: Theme.of(context)
+                                                  .textTheme
+                                                  .labelSmall
+                                                  ?.copyWith(
+                                                    color: AppTheme.calm,
+                                                    fontWeight: FontWeight.w800,
+                                                  ),
+                                            ),
+                                          ],
                                           const SizedBox(height: 2),
                                           Text(
                                             e.text,

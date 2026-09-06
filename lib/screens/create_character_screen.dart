@@ -52,6 +52,16 @@ class _CreateCharacterScreenState extends State<CreateCharacterScreen> {
       if (file == null) return;
 
       final bytes = await file.readAsBytes();
+      // Web / localStorage-friendly guard (~1.8MB raw ≈ safer after base64/IDB).
+      const maxBytes = 1800 * 1024;
+      if (bytes.lengthInBytes > maxBytes) {
+        setState(() {
+          _pickError =
+              'Photo is too large (${(bytes.lengthInBytes / (1024 * 1024)).toStringAsFixed(1)} MB). '
+              'Pick a smaller image or use a preset.';
+        });
+        return;
+      }
       setState(() {
         _imageBytes = bytes;
         _selectedPresetId = null;
