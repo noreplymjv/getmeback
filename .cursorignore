@@ -1,0 +1,27 @@
+# Cursor Codebase Indexing Exclusions
+# Prevents Cursor indexing daemon from choking on heavy directories on NTFS drive
+
+.git/
+node_modules/
+.dart_tool/
+build/
+dist/
+.next/
+.astro/
+.cache/
+venv/
+.venv/
+__pycache__/
+dup/
+DELETED/
+Hetzner_H3_Backup/
+Gdrv/
+*.tar.gz
+*.sql
+*.sqlite3
+*.db
+*.iso
+*.img
+*.zip
+*.bin
+*.log
