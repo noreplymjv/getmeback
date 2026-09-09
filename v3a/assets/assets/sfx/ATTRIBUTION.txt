@@ -1,0 +1,2 @@
+GetMeBack cartoon SFX in this folder are original, generated procedurally
+(sine/noise bursts) for the app. No third-party samples.
