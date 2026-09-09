@@ -3,12 +3,15 @@
 #
 # Usage:
 #   ./scripts/deploy-github-pages.sh              # replace site ROOT (keeps version folders like v2/)
+#   ./scripts/deploy-github-pages.sh v3a          # deploy ONLY into /getmeback/v3a/ (root stays)
 #   ./scripts/deploy-github-pages.sh v2           # deploy ONLY into /getmeback/v2/ (root stays)
 #   ./scripts/deploy-github-pages.sh --root       # same as no args (root)
 #
 # Live:
 #   https://noreplymjv.github.io/getmeback/       (stable / current root)
 #   https://noreplymjv.github.io/getmeback/v2/    (versioned)
+#   https://noreplymjv.github.io/getmeback/v3/    (versioned)
+#   https://noreplymjv.github.io/getmeback/v3a/   (recommended)
 #   https://noreplymjv.github.io/getmeback/versions.html
 set -euo pipefail
 
@@ -100,15 +103,19 @@ write_versions_index() {
   <h1>GetMeBack — live versions</h1>
   <p>All builds stay online simultaneously. Pick a version:</p>
   <div class="card">
-    <div><strong>Version 3 (World-Class Next-Gen)</strong> — Voronoi Shatter, Optical Shockwaves, Kinetic Swipes & Kintsugi</div>
+    <div><strong>v3a (recommended)</strong> — restored room prop sprites + improved Kintsugi mend</div>
+    <a href="./v3a/">https://noreplymjv.github.io/getmeback/v3a/</a>
+  </div>
+  <div class="card">
+    <div><strong>Version 3</strong> — prior v3 slot</div>
     <a href="./v3/">https://noreplymjv.github.io/getmeback/v3/</a>
   </div>
   <div class="card">
-    <div><strong>Version 2 (Realistic Demolition)</strong> — Multi-stage prop destruction & arsenal HUD</div>
+    <div><strong>Version 2</strong> — multi-stage demolition</div>
     <a href="./v2/">https://noreplymjv.github.io/getmeback/v2/</a>
   </div>
   <div class="card">
-    <div><strong>Stable (v1 Root)</strong></div>
+    <div><strong>Stable (v1 root)</strong></div>
     <a href="./">https://noreplymjv.github.io/getmeback/</a>
   </div>
 </body>

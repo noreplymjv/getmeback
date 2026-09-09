@@ -32,15 +32,30 @@ class _KintsugiScreenState extends State<KintsugiScreen>
   late final AnimationController _glowCtrl;
 
   static const List<Offset> _crackSeams = [
-    Offset(0.25, 0.35),
-    Offset(0.38, 0.45),
-    Offset(0.50, 0.50),
-    Offset(0.62, 0.55),
-    Offset(0.75, 0.65),
-    Offset(0.50, 0.28),
-    Offset(0.50, 0.72),
-    Offset(0.32, 0.60),
-    Offset(0.68, 0.40),
+    // Main diagonal fracture
+    Offset(0.28, 0.30),
+    Offset(0.40, 0.42),
+    Offset(0.52, 0.50),
+    Offset(0.64, 0.58),
+    Offset(0.74, 0.68),
+    // Cross branch
+    Offset(0.48, 0.26),
+    Offset(0.50, 0.40),
+    Offset(0.52, 0.56),
+    Offset(0.54, 0.74),
+    // Side hairlines
+    Offset(0.34, 0.58),
+    Offset(0.42, 0.62),
+    Offset(0.66, 0.38),
+    Offset(0.70, 0.46),
+  ];
+
+  /// Authored crack polylines (indices into [_crackSeams]).
+  static const List<List<int>> _crackPaths = [
+    [0, 1, 2, 3, 4],
+    [5, 6, 7, 8],
+    [9, 10],
+    [11, 12],
   ];
 
   @override
@@ -61,14 +76,32 @@ class _KintsugiScreenState extends State<KintsugiScreen>
   void _onPaintGold(Offset localPos, Size canvasSize) {
     if (_isCompleted) return;
 
-    final norm = Offset(localPos.dx / canvasSize.width, localPos.dy / canvasSize.height);
+    var norm = Offset(
+      localPos.dx / canvasSize.width,
+      localPos.dy / canvasSize.height,
+    );
+
+    // Magnetize toward nearest crack seam so gold reads as kintsugi, not scribble.
+    Offset? nearest;
+    var best = 0.09;
+    for (final seam in _crackSeams) {
+      final d = (seam - norm).distance;
+      if (d < best) {
+        best = d;
+        nearest = seam;
+      }
+    }
+    if (nearest != null) {
+      norm = Offset.lerp(norm, nearest, 0.72)!;
+    }
+
     _goldStrokes.add(norm);
 
     // Check proximity to crack seams
     int hitCount = 0;
     for (final seam in _crackSeams) {
       for (final stroke in _goldStrokes) {
-        if ((stroke - seam).distance < 0.08) {
+        if ((stroke - seam).distance < 0.07) {
           hitCount++;
           break;
         }
@@ -83,6 +116,8 @@ class _KintsugiScreenState extends State<KintsugiScreen>
       if (_repairProgress >= 1.0 && !_isCompleted) {
         _completeKintsugi();
       }
+    } else {
+      setState(() {});
     }
   }
 
@@ -177,6 +212,7 @@ class _KintsugiScreenState extends State<KintsugiScreen>
                                 painter: _KintsugiBowlPainter(
                                   goldStrokes: _goldStrokes,
                                   crackSeams: _crackSeams,
+                                  crackPaths: _crackPaths,
                                   isCompleted: _isCompleted,
                                   glowT: _glowCtrl.value,
                                 ),
@@ -245,94 +281,147 @@ class _KintsugiBowlPainter extends CustomPainter {
   _KintsugiBowlPainter({
     required this.goldStrokes,
     required this.crackSeams,
+    required this.crackPaths,
     required this.isCompleted,
     required this.glowT,
   });
 
   final List<Offset> goldStrokes;
   final List<Offset> crackSeams;
+  final List<List<int>> crackPaths;
   final bool isCompleted;
   final double glowT;
 
   @override
   void paint(Canvas canvas, Size size) {
-    final center = Offset(size.width / 2, size.height / 2);
-    final radius = size.width * 0.42;
+    final center = Offset(size.width / 2, size.height * 0.48);
+    final rx = size.width * 0.40;
+    final ry = size.height * 0.34;
+    final bowl = Rect.fromCenter(center: center, width: rx * 2, height: ry * 2);
 
-    // 1. Ceramic Bowl Base (Deep Celadon Charcoal)
+    // Soft stand shadow
+    canvas.drawOval(
+      Rect.fromCenter(
+        center: Offset(center.dx, center.dy + ry * 0.92),
+        width: rx * 1.35,
+        height: ry * 0.28,
+      ),
+      Paint()..color = Colors.black.withValues(alpha: 0.35),
+    );
+
+    // Porcelain body
     final bowlPaint = Paint()
       ..shader = RadialGradient(
-        colors: [
-          const Color(0xFF263238),
-          const Color(0xFF1E272C),
-          const Color(0xFF101416),
+        center: const Alignment(-0.25, -0.35),
+        radius: 1.05,
+        colors: const [
+          Color(0xFFE8EEF0),
+          Color(0xFFB7C4C8),
+          Color(0xFF6D7B82),
+          Color(0xFF2A3338),
         ],
-        stops: const [0.0, 0.7, 1.0],
-      ).createShader(Rect.fromCircle(center: center, radius: radius));
+        stops: const [0.0, 0.35, 0.72, 1.0],
+      ).createShader(bowl);
+    canvas.drawOval(bowl, bowlPaint);
 
-    canvas.drawCircle(center, radius, bowlPaint);
+    // Inner well
+    canvas.drawOval(
+      Rect.fromCenter(
+        center: Offset(center.dx, center.dy - ry * 0.08),
+        width: rx * 1.45,
+        height: ry * 1.15,
+      ),
+      Paint()
+        ..shader = RadialGradient(
+          colors: [
+            const Color(0xFF1A2226).withValues(alpha: 0.55),
+            Colors.transparent,
+          ],
+        ).createShader(bowl),
+    );
 
-    // Rim highlight
+    // Rim
     final rimPaint = Paint()
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 3.5
-      ..color = Colors.white.withValues(alpha: 0.25);
-    canvas.drawCircle(center, radius, rimPaint);
+      ..strokeWidth = 3.2
+      ..color = Colors.white.withValues(alpha: 0.45);
+    canvas.drawOval(bowl.deflate(1.5), rimPaint);
 
-    // 2. Black hairline fracture seams
+    // Crack seams (authored polylines)
     final crackPaint = Paint()
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 2.0
+      ..strokeWidth = 1.8
       ..strokeCap = StrokeCap.round
-      ..color = Colors.black.withValues(alpha: 0.85);
+      ..color = Colors.black.withValues(alpha: 0.78);
 
-    final path = Path();
-    for (int i = 0; i < crackSeams.length; i++) {
-      final pt = Offset(crackSeams[i].dx * size.width, crackSeams[i].dy * size.height);
-      if (i == 0) {
-        path.moveTo(pt.dx, pt.dy);
-      } else {
-        path.lineTo(pt.dx, pt.dy);
+    Path seamGuide = Path();
+    for (final idxs in crackPaths) {
+      if (idxs.isEmpty) continue;
+      final path = Path();
+      for (var i = 0; i < idxs.length; i++) {
+        final seam = crackSeams[idxs[i]];
+        final pt = Offset(seam.dx * size.width, seam.dy * size.height);
+        if (i == 0) {
+          path.moveTo(pt.dx, pt.dy);
+        } else {
+          path.lineTo(pt.dx, pt.dy);
+        }
       }
+      canvas.drawPath(path, crackPaint);
+      seamGuide.addPath(path, Offset.zero);
     }
-    canvas.drawPath(path, crackPaint);
 
-    // 3. User Molten Gold Fill Layer
+    // Molten gold strokes
     final goldPaint = Paint()
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 6.0
+      ..strokeWidth = 5.5
       ..strokeCap = StrokeCap.round
-      ..color = AppTheme.gold.withValues(alpha: isCompleted ? 0.95 : 0.85);
+      ..strokeJoin = StrokeJoin.round
+      ..color = AppTheme.gold.withValues(alpha: isCompleted ? 0.96 : 0.88);
 
     if (goldStrokes.length > 1) {
       final goldPath = Path();
-      final first = Offset(goldStrokes.first.dx * size.width, goldStrokes.first.dy * size.height);
+      final first = Offset(
+        goldStrokes.first.dx * size.width,
+        goldStrokes.first.dy * size.height,
+      );
       goldPath.moveTo(first.dx, first.dy);
-      for (int i = 1; i < goldStrokes.length; i++) {
-        final pt = Offset(goldStrokes[i].dx * size.width, goldStrokes[i].dy * size.height);
+      for (var i = 1; i < goldStrokes.length; i++) {
+        final pt = Offset(
+          goldStrokes[i].dx * size.width,
+          goldStrokes[i].dy * size.height,
+        );
         goldPath.lineTo(pt.dx, pt.dy);
       }
       canvas.drawPath(goldPath, goldPaint);
 
-      // Gold shimmer highlight
       final shimmerPaint = Paint()
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 2.0
-        ..color = Colors.white.withValues(alpha: 0.75 + glowT * 0.25);
+        ..strokeWidth = 1.8
+        ..color = Colors.white.withValues(alpha: 0.7 + glowT * 0.25);
       canvas.drawPath(goldPath, shimmerPaint);
     }
 
-    // 4. Full Completed Gold Radiance
     if (isCompleted) {
       final completedGlow = Paint()
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 10.0 + glowT * 4.0
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 12)
-        ..color = AppTheme.gold.withValues(alpha: 0.45);
-      canvas.drawPath(path, completedGlow);
+        ..strokeWidth = 9.0 + glowT * 4.0
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 14)
+        ..color = AppTheme.gold.withValues(alpha: 0.42);
+      canvas.drawPath(seamGuide, completedGlow);
+      canvas.drawOval(
+        bowl,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 2.5
+          ..color = AppTheme.gold.withValues(alpha: 0.55 + glowT * 0.2),
+      );
     }
   }
 
   @override
-  bool shouldRepaint(covariant _KintsugiBowlPainter oldDelegate) => true;
+  bool shouldRepaint(covariant _KintsugiBowlPainter oldDelegate) =>
+      oldDelegate.glowT != glowT ||
+      oldDelegate.isCompleted != isCompleted ||
+      oldDelegate.goldStrokes.length != goldStrokes.length;
 }

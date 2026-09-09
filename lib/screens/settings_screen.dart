@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../services/storage_service.dart';
 import '../services/vent_sfx.dart';
 import '../theme/app_theme.dart';
+import '../utils/app_version.dart';
 import '../widgets/premium_chrome.dart';
 
 /// Local prefs: haptics, SFX, zen streak, journal, clear data.
@@ -348,7 +349,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         FadeSlideIn(
                           delay: const Duration(milliseconds: 180),
                           child: Text(
-                            'V1A · 1.0.0-a1',
+                            AppVersion.badge,
                             textAlign: TextAlign.center,
                             style: Theme.of(context)
                                 .textTheme

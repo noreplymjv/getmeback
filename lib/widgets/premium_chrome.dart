@@ -247,20 +247,11 @@ class _ShineButtonState extends State<ShineButton>
     return AnimatedBuilder(
       animation: _shine,
       builder: (context, child) {
-        return DecoratedBox(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(28),
-            boxShadow: enabled
-                ? [
-                    BoxShadow(
-                      color: (widget.color ?? AppTheme.accent)
-                          .withValues(alpha: 0.38),
-                      blurRadius: 22,
-                      offset: const Offset(0, 8),
-                    ),
-                  ]
-                : null,
-          ),
+        return Material(
+          color: Colors.transparent,
+          elevation: enabled ? 6 : 0,
+          shadowColor: (widget.color ?? AppTheme.accent).withValues(alpha: 0.55),
+          borderRadius: BorderRadius.circular(28),
           child: child,
         );
       },

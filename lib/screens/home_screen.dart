@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../models/room_setup.dart';
 import '../services/vent_sfx.dart';
 import '../theme/app_theme.dart';
+import '../utils/app_version.dart';
 import '../widgets/premium_chrome.dart';
 
 /// Front door: Character vent, Room rampage, or Watch Demo.
@@ -143,7 +144,7 @@ class HomeScreen extends StatelessWidget {
                   FadeSlideIn(
                     delay: const Duration(milliseconds: 360),
                     child: Text(
-                      'V1A · 1.0.0-a1',
+                      AppVersion.badge,
                       textAlign: TextAlign.center,
                       style: Theme.of(context).textTheme.labelSmall?.copyWith(
                             color: AppTheme.goldSoft.withValues(alpha: 0.7),

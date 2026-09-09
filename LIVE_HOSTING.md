@@ -1,11 +1,13 @@
 # GetMeBack — Live hosting
 
-## Public URLs (both live)
+## Public URLs (all live)
 
 | Slot | URL |
 |------|-----|
-| **Stable (current)** | https://noreplymjv.github.io/getmeback/ |
-| **New (v2)** | https://noreplymjv.github.io/getmeback/v2/ |
+| **v3a (recommended)** | https://noreplymjv.github.io/getmeback/v3a/ |
+| **v3** | https://noreplymjv.github.io/getmeback/v3/ |
+| **v2** | https://noreplymjv.github.io/getmeback/v2/ |
+| **Stable (root)** | https://noreplymjv.github.io/getmeback/ |
 | **Chooser** | https://noreplymjv.github.io/getmeback/versions.html |
 
 | Check | Result |
@@ -22,10 +24,12 @@ Vent names/photos stay **in the user’s browser only** — not uploaded to GitH
 cd app   # …/GetMeBack/app
 source ../../.portable-sdk/activate.sh   # or app/.tooling
 
-# Update ONLY the new version (keeps stable root online)
-./scripts/deploy-github-pages.sh v2
+# Update ONLY v3a (keeps root / v2 / v3 online)
+./scripts/deploy-github-pages.sh v3a
 
-# Update ONLY the stable root (keeps /v2/ online)
+# Other slots
+./scripts/deploy-github-pages.sh v3
+./scripts/deploy-github-pages.sh v2
 ./scripts/deploy-github-pages.sh --root
 ```
 

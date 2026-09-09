@@ -1,7 +1,7 @@
 name: getmeback
-description: GetMeBack V1A — playful stress relief. Vent, smash rooms, then breathe calm.
+description: GetMeBack v3a — stress relief with smash rooms, calm, and Kintsugi mend.
 publish_to: 'none'
-version: 3.0.0-v3+13
+version: 3.0.0-v3a+14
 
 environment:
   sdk: ^3.12.2
