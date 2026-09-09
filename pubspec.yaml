@@ -1,7 +1,7 @@
 name: getmeback
 description: GetMeBack V1A — playful stress relief. Vent, smash rooms, then breathe calm.
 publish_to: 'none'
-version: 1.0.0-a1+12
+version: 3.0.0-v3+13
 
 environment:
   sdk: ^3.12.2

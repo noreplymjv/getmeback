@@ -180,6 +180,14 @@ class _CalmOutroScreenState extends State<CalmOutroScreen>
                           color: AppTheme.calm,
                           onPressed: _finish,
                         ),
+                        const SizedBox(height: 10),
+                        ShineButton(
+                          label: 'Mend with Gold (Kintsugi)',
+                          icon: Icons.auto_awesome,
+                          color: AppTheme.gold,
+                          onPressed: () =>
+                              context.go('/kintsugi/${widget.targetId}'),
+                        ),
                         const SizedBox(height: 8),
                         Semantics(
                           button: true,

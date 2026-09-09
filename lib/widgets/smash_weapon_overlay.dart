@@ -2,7 +2,6 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
-import '../theme/app_theme.dart';
 
 /// Interactive weapons for room demolition.
 enum SmashWeapon {

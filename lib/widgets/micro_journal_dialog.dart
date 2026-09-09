@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../theme/app_theme.dart';
+import 'tactile_paper_shredder.dart';
 
 /// Result of the optional post-calm check-in.
 typedef MicroJournalResult = ({String text, String? mood});
@@ -105,6 +106,20 @@ class _MicroJournalDialogState extends State<_MicroJournalDialog> {
         ],
       ),
       actions: [
+        TextButton.icon(
+          icon: const Icon(Icons.content_cut_rounded, size: 16, color: AppTheme.accent),
+          label: const Text(
+            'Rage Shredder',
+            style: TextStyle(color: AppTheme.accent, fontWeight: FontWeight.bold),
+          ),
+          onPressed: () {
+            Navigator.pop(context);
+            showDialog<void>(
+              context: context,
+              builder: (_) => const TactilePaperShredderDialog(),
+            );
+          },
+        ),
         TextButton(
           onPressed: () => Navigator.pop(context),
           child: const Text('Skip'),

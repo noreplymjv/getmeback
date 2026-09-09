@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../models/vent_target.dart';
+import '../services/sensor_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/premium_chrome.dart';
 import '../widgets/target_avatar.dart';
@@ -240,16 +241,21 @@ class VentSceneShell extends StatelessWidget {
   }
 }
 
-/// Photorealistic / 2.5D Room Stage with dynamic lighting, perspective floor shadows, and ambient motes.
 class RoomStageBackdrop extends StatefulWidget {
   const RoomStageBackdrop({
     super.key,
     required this.child,
     required this.roomAsset,
+    this.strikeLightPoint,
+    this.strikeLightColor,
+    this.strikeLightIntensity = 0.0,
   });
 
   final Widget child;
   final String roomAsset;
+  final Offset? strikeLightPoint;
+  final Color? strikeLightColor;
+  final double strikeLightIntensity;
 
   @override
   State<RoomStageBackdrop> createState() => _RoomStageBackdropState();
@@ -276,11 +282,22 @@ class _RoomStageBackdropState extends State<RoomStageBackdrop>
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-        // Layer 1: Solid background fallback
-        const ColoredBox(color: AppTheme.background),
+    return MouseRegion(
+      onHover: (event) {
+        final size = MediaQuery.sizeOf(context);
+        if (size.width <= 0 || size.height <= 0) return;
+        final center = Offset(size.width / 2, size.height / 2);
+        final norm = Offset(
+          (event.position.dx - center.dx) / (size.width / 2),
+          (event.position.dy - center.dy) / (size.height / 2),
+        );
+        SensorService.instance.updatePointerParallax(norm);
+      },
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          // Layer 1: Solid background fallback
+          const ColoredBox(color: AppTheme.background),
 
         // Layer 2: High-res Room Scene Image
         Positioned.fill(
@@ -359,11 +376,61 @@ class _RoomStageBackdropState extends State<RoomStageBackdrop>
           },
         ),
 
+        // Layer 6.5: Dynamic Strike Point-Lighting (illuminates walls & floor on impacts)
+        if (widget.strikeLightIntensity > 0.01 && widget.strikeLightPoint != null)
+          Positioned.fill(
+            child: IgnorePointer(
+              child: CustomPaint(
+                painter: _StrikeLightPainter(
+                  point: widget.strikeLightPoint!,
+                  color: widget.strikeLightColor ?? AppTheme.gold,
+                  intensity: widget.strikeLightIntensity.clamp(0.0, 1.0),
+                ),
+              ),
+            ),
+          ),
+
         // Layer 7: Forefront interactive interactive content
         widget.child,
       ],
-    );
+    ),
+  );
+}
+}
+
+class _StrikeLightPainter extends CustomPainter {
+  _StrikeLightPainter({
+    required this.point,
+    required this.color,
+    required this.intensity,
+  });
+
+  final Offset point;
+  final Color color;
+  final double intensity;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (intensity <= 0.01) return;
+    final rect = Rect.fromCircle(center: point, radius: 260.0);
+    final paint = Paint()
+      ..blendMode = BlendMode.plus
+      ..shader = RadialGradient(
+        colors: [
+          color.withValues(alpha: intensity * 0.48),
+          color.withValues(alpha: intensity * 0.16),
+          Colors.transparent,
+        ],
+        stops: const [0.0, 0.45, 1.0],
+      ).createShader(rect);
+    canvas.drawRect(Rect.fromLTWH(0, 0, size.width, size.height), paint);
   }
+
+  @override
+  bool shouldRepaint(covariant _StrikeLightPainter oldDelegate) =>
+      oldDelegate.intensity != intensity ||
+      oldDelegate.point != point ||
+      oldDelegate.color != color;
 }
 
 class _AmbientMotesPainter extends CustomPainter {

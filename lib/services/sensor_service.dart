@@ -6,6 +6,7 @@ import 'package:flutter/painting.dart';
 import 'package:sensors_plus/sensors_plus.dart';
 
 /// Gyro parallax + shake detection with graceful fallback when sensors unavailable.
+/// Supports both mobile hardware sensors and web/desktop mouse-pointer parallax.
 class SensorService {
   SensorService._();
   static final SensorService instance = SensorService._();
@@ -21,6 +22,15 @@ class SensorService {
   bool _listening = false;
   DateTime _lastShake = DateTime.fromMillisecondsSinceEpoch(0);
   static const _shakeCooldown = Duration(milliseconds: 900);
+
+  /// Updates parallax based on mouse cursor or touch pointer position.
+  /// [normalizedOffset] has components from -1.0 to +1.0 relative to screen center.
+  void updatePointerParallax(Offset normalizedOffset, {double intensity = 14.0}) {
+    parallax = Offset(
+      (normalizedOffset.dx * intensity).clamp(-intensity, intensity),
+      (normalizedOffset.dy * (intensity * 0.7)).clamp(-intensity * 0.7, intensity * 0.7),
+    );
+  }
 
   void start() {
     if (_listening || kIsWeb) return;

@@ -67,10 +67,10 @@
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
 	<key>NSCameraUsageDescription</key>
-	<string>GetMeBack needs camera access to let you upload a photo target for venting.</string>
+	<string>GetMeBack uses the camera solely to let you capture a custom image for your private on-device stress-relief room. Photos remain on your device and are never uploaded or shared.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>GetMeBack needs photo library access to let you pick a photo target for venting.</string>
+	<string>GetMeBack accesses your photo library so you can select an image to customize your private on-device stress-relief canvas. Your photos remain private on your device.</string>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>GetMeBack uses the microphone for the Tornado scream meter vent scene.</string>
+	<string>GetMeBack measures ambient sound levels in real time for the interactive tornado and wind mini-games. Audio is processed strictly on-device and is never recorded, stored, or transmitted.</string>
 </dict>
 </plist>

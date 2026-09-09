@@ -9,6 +9,7 @@ import 'screens/characters_screen.dart';
 import 'screens/create_character_screen.dart';
 import 'screens/demo_mode_screen.dart';
 import 'screens/home_screen.dart';
+import 'screens/kintsugi_screen.dart';
 import 'screens/room_picker_screen.dart';
 import 'screens/settings_screen.dart';
 import 'screens/vent_menu_screen.dart';
@@ -106,6 +107,13 @@ final GoRouter appRouter = GoRouter(
       pageBuilder: (context, state) {
         final targetId = state.pathParameters['targetId']!;
         return _fadeSlide(state, CalmOutroScreen(targetId: targetId));
+      },
+    ),
+    GoRoute(
+      path: '/kintsugi/:targetId',
+      pageBuilder: (context, state) {
+        final targetId = state.pathParameters['targetId']!;
+        return _fadeSlide(state, _KintsugiLoader(targetId: targetId));
       },
     ),
     GoRoute(
@@ -322,6 +330,50 @@ class _RoomRampageLoaderState extends State<_RoomRampageLoader> {
       );
     }
     return RoomRampageScene(target: _target!, room: _room!);
+  }
+}
+
+class _KintsugiLoader extends StatefulWidget {
+  const _KintsugiLoader({required this.targetId});
+  final String targetId;
+
+  @override
+  State<_KintsugiLoader> createState() => _KintsugiLoaderState();
+}
+
+class _KintsugiLoaderState extends State<_KintsugiLoader> {
+  VentTarget? _target;
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    VentTarget? target;
+    if (widget.targetId == 'room_guest') {
+      target = roomGuestTarget;
+    } else {
+      final targets = await StorageService.instance.loadTargets();
+      target = targets.where((t) => t.id == widget.targetId).firstOrNull;
+    }
+    if (!mounted) return;
+    setState(() {
+      _target = target ?? roomGuestTarget;
+      _loading = false;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_loading) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+    return KintsugiScreen(target: _target!);
   }
 }
 

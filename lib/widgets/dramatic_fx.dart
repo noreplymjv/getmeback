@@ -12,22 +12,26 @@ class DramaticFxOverlay extends StatelessWidget {
     super.key,
     required this.particles,
     this.rings = const [],
+    this.shockwaves = const [],
     this.popTexts = const [],
     this.smokes = const [],
     this.cracks = const [],
     this.flash = 0,
     this.vignette = 0,
+    this.chromaticAberration = 0,
     this.shake = Offset.zero,
     this.child,
   });
 
   final List<FxParticle> particles;
   final List<FxRing> rings;
+  final List<FxShockwave> shockwaves;
   final List<FxPopText> popTexts;
   final List<FxSmoke> smokes;
   final List<FxCrack> cracks;
   final double flash;
   final double vignette;
+  final double chromaticAberration;
   final Offset shake;
   final Widget? child;
 
@@ -44,6 +48,7 @@ class DramaticFxOverlay extends StatelessWidget {
               painter: _FxPainter(
                 particles: particles,
                 rings: rings,
+                shockwaves: shockwaves,
                 smokes: smokes,
                 cracks: cracks,
               ),
@@ -103,6 +108,14 @@ class DramaticFxOverlay extends StatelessWidget {
                     ],
                     radius: 0.85,
                   ),
+                ),
+              ),
+            ),
+          if (chromaticAberration > 0.02)
+            IgnorePointer(
+              child: CustomPaint(
+                painter: _ChromaticAberrationPainter(
+                  intensity: chromaticAberration,
                 ),
               ),
             ),
@@ -168,6 +181,31 @@ class FxRing {
 
   void tick(double dt) {
     radius += 420 * dt;
+    life -= dt / maxLife;
+  }
+}
+
+class FxShockwave {
+  FxShockwave({
+    required this.x,
+    required this.y,
+    required this.radius,
+    required this.maxRadius,
+    required this.life,
+    required this.color,
+    this.maxLife = 0.42,
+  });
+
+  double x;
+  double y;
+  double radius;
+  double maxRadius;
+  double life;
+  double maxLife;
+  Color color;
+
+  void tick(double dt) {
+    radius += (maxRadius - radius) * (dt * 11.0).clamp(0.0, 1.0);
     life -= dt / maxLife;
   }
 }
@@ -252,11 +290,16 @@ class DramaticFxController extends ChangeNotifier {
   final _rng = Random();
   final List<FxParticle> particles = [];
   final List<FxRing> rings = [];
+  final List<FxShockwave> shockwaves = [];
   final List<FxPopText> popTexts = [];
   final List<FxSmoke> smokes = [];
   final List<FxCrack> cracks = [];
   double flash = 0;
   double vignette = 0;
+  double chromaticAberration = 0;
+  bool isBulletTime = false;
+  double bulletTimeFactor = 1.0;
+  double _bulletTimeTimer = 0.0;
   Offset shake = Offset.zero;
   double _shakeT = 0;
   double _shakeAmp = 0;
@@ -266,6 +309,39 @@ class DramaticFxController extends ChangeNotifier {
   double _shakeNoiseT = 0;
 
   bool get isHitStopped => _hitStopRemaining > 0;
+
+  /// Trigger optical refraction shockwave radiating outward
+  void triggerShockwave({
+    required Offset at,
+    Color? color,
+    double maxRadius = 320.0,
+    double chromatic = 0.75,
+  }) {
+    shockwaves.add(
+      FxShockwave(
+        x: at.dx,
+        y: at.dy,
+        radius: 16.0,
+        maxRadius: maxRadius,
+        life: 1.0,
+        color: color ?? const Color(0xFF7AEFFF),
+      ),
+    );
+    chromaticAberration = chromatic.clamp(0.0, 1.0);
+    notifyListeners();
+  }
+
+  /// Cinematic Bullet-Time slow motion (e.g. room clear celebration)
+  void triggerBulletTime({
+    Duration duration = const Duration(milliseconds: 1400),
+    double factor = 0.28,
+  }) {
+    isBulletTime = true;
+    bulletTimeFactor = factor;
+    _bulletTimeTimer = duration.inMilliseconds / 1000.0;
+    vignette = max(vignette, 0.65);
+    notifyListeners();
+  }
 
   /// Brief frame freeze on heavy impacts (30–50 ms).
   void triggerHitStop([Duration duration = const Duration(milliseconds: 40)]) {
@@ -741,13 +817,28 @@ class DramaticFxController extends ChangeNotifier {
       return;
     }
 
+    var effectiveDt = dt;
+    if (isBulletTime) {
+      _bulletTimeTimer -= dt;
+      if (_bulletTimeTimer <= 0) {
+        isBulletTime = false;
+        bulletTimeFactor = 1.0;
+      } else {
+        effectiveDt = dt * bulletTimeFactor;
+      }
+    }
+
     var changed = false;
+    if (chromaticAberration > 0) {
+      chromaticAberration = (chromaticAberration - dt * 3.2).clamp(0.0, 1.0);
+      changed = true;
+    }
     if (flash > 0) {
       flash = (flash - dt * 4.0).clamp(0.0, 1.0);
       changed = true;
     }
     if (vignette > 0) {
-      vignette = (vignette - dt * 2.5).clamp(0.0, 1.0);
+      vignette = (vignette - dt * (isBulletTime ? 0.6 : 2.5)).clamp(0.0, 1.0);
       changed = true;
     }
     if (_shakeT > 0) {
@@ -765,14 +856,20 @@ class DramaticFxController extends ChangeNotifier {
       changed = true;
     }
 
+    for (final sw in shockwaves) {
+      sw.tick(effectiveDt);
+      changed = true;
+    }
+    shockwaves.removeWhere((sw) => sw.life <= 0);
+
     for (final p in particles) {
-      p.tick(dt);
+      p.tick(effectiveDt);
       changed = true;
     }
     particles.removeWhere((p) => p.life <= 0);
 
     for (final r in rings) {
-      r.tick(dt);
+      r.tick(effectiveDt);
       changed = true;
     }
     rings.removeWhere((r) => r.life <= 0);
@@ -803,12 +900,14 @@ class _FxPainter extends CustomPainter {
   _FxPainter({
     required this.particles,
     required this.rings,
+    this.shockwaves = const [],
     required this.smokes,
     required this.cracks,
   });
 
   final List<FxParticle> particles;
   final List<FxRing> rings;
+  final List<FxShockwave> shockwaves;
   final List<FxSmoke> smokes;
   final List<FxCrack> cracks;
 
@@ -842,6 +941,23 @@ class _FxPainter extends CustomPainter {
         ..style = PaintingStyle.stroke
         ..strokeWidth = 4 + (1 - r.life) * 8;
       canvas.drawCircle(Offset(r.x, r.y), r.radius, paint);
+    }
+
+    for (final sw in shockwaves) {
+      final alpha = (sw.life * 0.75).clamp(0.0, 1.0);
+      final ringWidth = (14.0 * (1.0 - (1.0 - sw.life) * 0.5)).clamp(3.0, 18.0);
+      final outerPaint = Paint()
+        ..color = sw.color.withValues(alpha: alpha * 0.45)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = ringWidth
+        ..maskFilter = MaskFilter.blur(BlurStyle.normal, ringWidth * 0.4);
+      canvas.drawCircle(Offset(sw.x, sw.y), sw.radius, outerPaint);
+
+      final innerPaint = Paint()
+        ..color = Colors.white.withValues(alpha: alpha * 0.85)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2.2;
+      canvas.drawCircle(Offset(sw.x, sw.y), sw.radius, innerPaint);
     }
 
     for (final p in particles) {
@@ -984,13 +1100,48 @@ class VentFxLayer extends StatelessWidget {
     return DramaticFxOverlay(
       particles: fx.particles,
       rings: fx.rings,
+      shockwaves: fx.shockwaves,
       popTexts: fx.popTexts,
       smokes: fx.smokes,
       cracks: fx.cracks,
       flash: reduceMotion ? 0 : fx.flash,
       vignette: fx.vignette,
+      chromaticAberration: reduceMotion ? 0 : fx.chromaticAberration,
       shake: reduceMotion ? Offset.zero : fx.shake,
       child: child,
     );
   }
+}
+
+class _ChromaticAberrationPainter extends CustomPainter {
+  _ChromaticAberrationPainter({required this.intensity});
+  final double intensity;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (intensity <= 0.01) return;
+    final w = size.width;
+    final h = size.height;
+    final offset = intensity * 6.0;
+
+    // Cyan channel offset pass
+    final cyanPaint = Paint()
+      ..blendMode = BlendMode.screen
+      ..color = const Color(0xFF00E5FF).withValues(alpha: intensity * 0.22)
+      ..strokeWidth = 3.0
+      ..style = PaintingStyle.stroke;
+    canvas.drawRect(Rect.fromLTWH(offset, 0, w - offset * 2, h), cyanPaint);
+
+    // Magenta channel offset pass
+    final magentaPaint = Paint()
+      ..blendMode = BlendMode.screen
+      ..color = const Color(0xFFFF0055).withValues(alpha: intensity * 0.22)
+      ..strokeWidth = 3.0
+      ..style = PaintingStyle.stroke;
+    canvas.drawRect(Rect.fromLTWH(-offset, 0, w + offset * 2, h), magentaPaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _ChromaticAberrationPainter oldDelegate) =>
+      oldDelegate.intensity != intensity;
 }

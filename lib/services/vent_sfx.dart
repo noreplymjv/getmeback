@@ -23,16 +23,17 @@ enum Sfx {
   suck,
 }
 
-/// Cartoon SFX + haptic helpers. Safe on web (haptics no-op).
+/// Cartoon SFX + haptic helpers with Acoustic 3.0 (pitch shifts, stereo panning, settle audio).
 class VentSfx {
   VentSfx._();
 
   static final VentSfx instance = VentSfx._();
 
-  static const _poolSize = 6;
+  static const _poolSize = 8;
   final List<AudioPlayer> _pool = [];
   int _next = 0;
   bool _ready = false;
+  final _rng = Random();
 
   Future<void> init() async {
     if (_ready) return;
@@ -51,7 +52,7 @@ class VentSfx {
         ),
       );
     } catch (_) {
-      // Web / desktop may not support the same audio context.
+      // Web / desktop fallback
     }
     for (var i = 0; i < _poolSize; i++) {
       final player = AudioPlayer();
@@ -73,19 +74,42 @@ class VentSfx {
     } catch (_) {}
   }
 
-  void play(Sfx sfx) {
+  /// Plays sound with Acoustic 3.0: pitch randomization (+-8%), volume control,
+  /// optional stereo panning, and optional delayed debris settle tinkle.
+  void play(
+    Sfx sfx, {
+    double pan = 0.0,
+    double volume = 1.0,
+    bool withDebrisSettle = false,
+  }) {
     if (!StorageService.instance.sfxEnabled) return;
     if (!_ready || _pool.isEmpty) {
       init();
       return;
     }
-    // Round-robin pool — avoid stop()->play() on the same player every time.
     final player = _pool[_next % _pool.length];
     _next++;
-    // Subtle dynamic pitch shifting (+-10%) to prevent sound fatigue during intense tapping
-    final randomRate = 0.92 + (Random().nextDouble() * 0.16);
+
+    // Acoustic 3.0: Randomize playback rate (+-8%) to prevent acoustic fatigue
+    final randomRate = 0.92 + (_rng.nextDouble() * 0.16);
     player.setPlaybackRate(randomRate).catchError((_) {});
+    player.setVolume(volume.clamp(0.0, 1.0)).catchError((_) {});
+    
+    // Balance panning if supported (-1.0 left to +1.0 right)
+    player.setBalance(pan.clamp(-1.0, 1.0)).catchError((_) {});
+
     player.play(AssetSource('sfx/${sfx.name}.wav')).catchError((_) {});
+
+    if (withDebrisSettle) {
+      Future.delayed(const Duration(milliseconds: 140), () {
+        if (!StorageService.instance.sfxEnabled) return;
+        final settlePlayer = _pool[_next % _pool.length];
+        _next++;
+        settlePlayer.setVolume(0.35 * volume).catchError((_) {});
+        settlePlayer.setPlaybackRate(1.15 + _rng.nextDouble() * 0.2).catchError((_) {});
+        settlePlayer.play(AssetSource('sfx/crack.wav')).catchError((_) {});
+      });
+    }
   }
 
   static bool get _hapticsOn => StorageService.instance.hapticsEnabled;

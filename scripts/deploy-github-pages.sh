@@ -98,14 +98,18 @@ write_versions_index() {
 </head>
 <body>
   <h1>GetMeBack — live versions</h1>
-  <p>Both builds stay online. Pick one:</p>
+  <p>All builds stay online simultaneously. Pick a version:</p>
   <div class="card">
-    <div><strong>Stable (current)</strong></div>
-    <a href="./">https://noreplymjv.github.io/getmeback/</a>
+    <div><strong>Version 3 (World-Class Next-Gen)</strong> — Voronoi Shatter, Optical Shockwaves, Kinetic Swipes & Kintsugi</div>
+    <a href="./v3/">https://noreplymjv.github.io/getmeback/v3/</a>
   </div>
   <div class="card">
-    <div><strong>New (v2)</strong> — latest polish</div>
+    <div><strong>Version 2 (Realistic Demolition)</strong> — Multi-stage prop destruction & arsenal HUD</div>
     <a href="./v2/">https://noreplymjv.github.io/getmeback/v2/</a>
+  </div>
+  <div class="card">
+    <div><strong>Stable (v1 Root)</strong></div>
+    <a href="./">https://noreplymjv.github.io/getmeback/</a>
   </div>
 </body>
 </html>

@@ -16,6 +16,7 @@ import '../widgets/dramatic_fx.dart';
 import '../widgets/interactive_room_prop.dart';
 import '../widgets/prop_destruction_scars.dart';
 import '../widgets/prop_shatter_fx.dart';
+import '../widgets/prop_voronoi_shatter.dart';
 import '../widgets/smash_weapon_overlay.dart';
 import '../widgets/vent_scene_shell.dart';
 
@@ -37,6 +38,11 @@ class _RoomRampageSceneState extends BaseVentSceneState<RoomRampageScene> {
   final Set<String> _smashed = {};
   final Set<String> _smashing = {};
   final Map<String, int> _damageStages = {};
+
+  final List<VoronoiShard> _voronoiShards = [];
+  Offset? _strikeLightPoint;
+  Color? _strikeLightColor;
+  double _strikeLightIntensity = 0.0;
 
   SmashWeapon _selectedWeapon = SmashWeapon.hammer;
   final List<WeaponStrikeInstance> _strikes = [];
@@ -112,7 +118,52 @@ class _RoomRampageSceneState extends BaseVentSceneState<RoomRampageScene> {
   }
 
   void _onShatterTick() {
-    if (mounted) setState(() {});
+    if (!mounted) return;
+    if (_voronoiShards.isNotEmpty) {
+      final size = MediaQuery.sizeOf(context);
+      final floorY = size.height * 0.82;
+      for (final s in _voronoiShards) {
+        s.tick(0.016, floorY: floorY);
+      }
+      _voronoiShards.removeWhere((s) => s.life <= 0);
+    }
+    setState(() {});
+  }
+
+  void _triggerStrikeLight(Offset at, Color color) {
+    setState(() {
+      _strikeLightPoint = at;
+      _strikeLightColor = color;
+      _strikeLightIntensity = 1.0;
+    });
+    Future.delayed(const Duration(milliseconds: 180), () {
+      if (mounted) {
+        setState(() => _strikeLightIntensity = 0.0);
+      }
+    });
+  }
+
+  void _handleSwipeStrike(Offset velocity, Size stage, Offset stageOrigin) {
+    if (_cleared) return;
+    RoomProp? target;
+    double closestDist = double.infinity;
+    final centerStage = Offset(stage.width / 2, stage.height / 2);
+    for (final p in widget.room.props) {
+      if (_smashed.contains(p.id) || _smashing.contains(p.id)) continue;
+      final a = p.anchorFor(widget.room.id);
+      final propPos = Offset(a.dx * stage.width, a.dy * stage.height);
+      final d = (propPos - centerStage).distance;
+      if (d < closestDist) {
+        closestDist = d;
+        target = p;
+      }
+    }
+    if (target != null) {
+      final a = target.anchorFor(widget.room.id);
+      final propCenter = Offset(a.dx * stage.width, a.dy * stage.height);
+      _onPropTap(target, propCenter, propCenter + stageOrigin, stage);
+      _setBanner('KINETIC SWIPE! ${target.label} struck!');
+    }
   }
 
   @override
@@ -287,6 +338,27 @@ class _RoomRampageSceneState extends BaseVentSceneState<RoomRampageScene> {
     _playMaterial(material, style);
     if (!StorageService.instance.reducedFxEnabled) {
       _burst(viewportCenter, style, prop.color, prop: prop);
+      // V3 Procedural Voronoi Shatter
+      final w = prop.effectiveSizeNorm * stage.width;
+      final propSize = Size(w, w * prop.effectiveAspectRatio);
+      final voronoi = VoronoiShatterEngine.fracture(
+        stageCenter: viewportCenter,
+        propSize: propSize,
+        localImpact: Offset(propSize.width / 2, propSize.height / 2),
+        color: prop.color,
+        material: material,
+        cellCount: 16,
+      );
+      _voronoiShards.addAll(voronoi);
+
+      // V3 Optical Shockwave & Chromatic Aberration
+      fx.triggerShockwave(
+        at: viewportCenter,
+        color: prop.color,
+        maxRadius: 340.0,
+        chromatic: 0.82,
+      );
+      _triggerStrikeLight(viewportCenter, prop.color);
     } else {
       // Softened juice when Reduce motion is on.
       fx.impact(at: viewportCenter, count: 12, intensity: 0.7, color: prop.color);
@@ -386,12 +458,13 @@ class _RoomRampageSceneState extends BaseVentSceneState<RoomRampageScene> {
 
   void _maybeFinish(Offset center) {
     if (!_cleared) return;
+    fx.triggerBulletTime(duration: const Duration(milliseconds: 1800));
     fx.confettiBurst(at: center, count: 90);
     fx.crackerBurst(at: center, volleys: 4);
     fx.glitterRain(at: center, count: 50);
     VentSfx.instance.play(Sfx.confetti);
     _setBanner('Room cleared. Feel better?');
-    Future.delayed(const Duration(milliseconds: 1600), () {
+    Future.delayed(const Duration(milliseconds: 2200), () {
       if (mounted) context.go('/calm/${widget.target.id}');
     });
   }
@@ -435,61 +508,98 @@ class _RoomRampageSceneState extends BaseVentSceneState<RoomRampageScene> {
               final props = List<RoomProp>.from(room.props)
                 ..sort((a, b) => a.effectiveZIndex.compareTo(b.effectiveZIndex));
 
-              return Stack(
-                fit: StackFit.expand,
-                children: [
-                  const ColoredBox(color: Color(0xFF0A0814)),
-                  Positioned(
-                    left: stageOrigin.dx + _parallax.dx,
-                    top: stageOrigin.dy + _parallax.dy,
-                    width: stage.width,
-                    height: stage.height,
-                    child: Image.asset(
-                      room.resolvedBaseAsset,
-                      fit: BoxFit.fill,
-                      filterQuality: FilterQuality.medium,
-                      errorBuilder: (_, _, _) => DecoratedBox(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                            colors: room.gradient,
+              return MouseRegion(
+                onHover: (event) {
+                  final center = Offset(viewport.width / 2, viewport.height / 2);
+                  final norm = Offset(
+                    (event.position.dx - center.dx) / (viewport.width / 2),
+                    (event.position.dy - center.dy) / (viewport.height / 2),
+                  );
+                  SensorService.instance.updatePointerParallax(norm);
+                },
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    const ColoredBox(color: Color(0xFF0A0814)),
+                    Positioned(
+                      left: stageOrigin.dx + _parallax.dx,
+                      top: stageOrigin.dy + _parallax.dy,
+                      width: stage.width,
+                      height: stage.height,
+                      child: Image.asset(
+                        room.resolvedBaseAsset,
+                        fit: BoxFit.fill,
+                        filterQuality: FilterQuality.medium,
+                        errorBuilder: (_, _, _) => DecoratedBox(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                              colors: room.gradient,
+                            ),
                           ),
                         ),
                       ),
                     ),
-                  ),
-                  Positioned(
-                    left: stageOrigin.dx,
-                    top: stageOrigin.dy,
-                    width: stage.width,
-                    height: stage.height,
-                    child: DestructionScarsLayer(scars: _scars),
-                  ),
-                  Positioned.fill(
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        gradient: RadialGradient(
-                          center: Alignment.center,
-                          radius: 1.15,
-                          colors: [
-                            Colors.transparent,
-                            Colors.black.withValues(alpha: 0.32),
-                          ],
+                    Positioned(
+                      left: stageOrigin.dx,
+                      top: stageOrigin.dy,
+                      width: stage.width,
+                      height: stage.height,
+                      child: DestructionScarsLayer(scars: _scars),
+                    ),
+                    Positioned.fill(
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          gradient: RadialGradient(
+                            center: Alignment.center,
+                            radius: 1.15,
+                            colors: [
+                              Colors.transparent,
+                              Colors.black.withValues(alpha: 0.32),
+                            ],
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                  Positioned.fill(
-                    child: GestureDetector(
-                      behavior: HitTestBehavior.translucent,
-                      onTap: _cancelHold,
-                      child: const SizedBox.expand(),
+                    Positioned.fill(
+                      child: GestureDetector(
+                        behavior: HitTestBehavior.translucent,
+                        onTap: _cancelHold,
+                        onPanEnd: (details) {
+                          final v = details.velocity.pixelsPerSecond;
+                          if (v.distance > 350) {
+                            _handleSwipeStrike(v, stage, stageOrigin);
+                          }
+                        },
+                        child: const SizedBox.expand(),
+                      ),
                     ),
-                  ),
-                  VentFxLayer(
-                    fx: fx,
-                    child: propShatterLayer(
+                    // V3 Dynamic Point-Lighting on Strikes
+                    if (_strikeLightIntensity > 0.01 && _strikeLightPoint != null)
+                      Positioned.fill(
+                        child: IgnorePointer(
+                          child: CustomPaint(
+                            painter: _StrikeLightPainter(
+                              point: _strikeLightPoint!,
+                              color: _strikeLightColor ?? AppTheme.gold,
+                              intensity: _strikeLightIntensity,
+                            ),
+                          ),
+                        ),
+                      ),
+                    // V3 Procedural Voronoi Shatter Layer
+                    if (_voronoiShards.isNotEmpty)
+                      Positioned.fill(
+                        child: IgnorePointer(
+                          child: CustomPaint(
+                            painter: VoronoiShatterPainter(shards: _voronoiShards),
+                          ),
+                        ),
+                      ),
+                    VentFxLayer(
+                      fx: fx,
+                      child: propShatterLayer(
                       shatter: _shatter,
                       child: Stack(
                         fit: StackFit.expand,
@@ -591,7 +701,8 @@ class _RoomRampageSceneState extends BaseVentSceneState<RoomRampageScene> {
                     ),
                   ),
                 ],
-              );
+              ),
+            );
             },
           ),
         ),
@@ -782,4 +893,39 @@ class _CoachOverlay extends StatelessWidget {
       ),
     );
   }
+}
+
+class _StrikeLightPainter extends CustomPainter {
+  _StrikeLightPainter({
+    required this.point,
+    required this.color,
+    required this.intensity,
+  });
+
+  final Offset point;
+  final Color color;
+  final double intensity;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (intensity <= 0.01) return;
+    final rect = Rect.fromCircle(center: point, radius: 260.0);
+    final paint = Paint()
+      ..blendMode = BlendMode.plus
+      ..shader = RadialGradient(
+        colors: [
+          color.withValues(alpha: intensity * 0.48),
+          color.withValues(alpha: intensity * 0.16),
+          Colors.transparent,
+        ],
+        stops: const [0.0, 0.45, 1.0],
+      ).createShader(rect);
+    canvas.drawRect(Rect.fromLTWH(0, 0, size.width, size.height), paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _StrikeLightPainter oldDelegate) =>
+      oldDelegate.intensity != intensity ||
+      oldDelegate.point != point ||
+      oldDelegate.color != color;
 }
