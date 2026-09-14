@@ -60,4 +60,19 @@ scope; no runtime image-gen APIs, no secrets, web-safe (CanvasKit).
 - Live checks: `/v5/` reachable, `/v5/version.json` = `5.0.0-v5` (+15);
   `/v3a/` unchanged; `/v4/` still 404 (reserved).
 
-_(Live curl results appended by the deploy/verify step.)_
+### Live results (verified 2026-09-14)
+
+| Endpoint | Result |
+|----------|--------|
+| `GET /v5/` | `200` |
+| `GET /v5/version.json` | `{"version":"5.0.0-v5","build_number":"15",...}` ✅ |
+| `GET /v3a/version.json` | `3.0.0-v3a` (+14) — **unchanged** ✅ |
+| `GET /v3a/` | `200` — unchanged ✅ |
+| `GET /v4/` | `404` — reserved/unused, untouched ✅ |
+
+- Branch `v5` pushed to `origin/v5` (commit `d9291b7`).
+- Deploy performed with `./scripts/deploy-github-pages.sh v5` only; the script
+  clones the existing `gh-pages` tree and writes solely into `/v5/` +
+  `versions.html`, so `/`, `/v2/`, `/v3/`, `/v3a/`, `/v4/` remain as-is.
+
+**Live (recommended):** https://noreplymjv.github.io/getmeback/v5/
