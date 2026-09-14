@@ -281,17 +281,41 @@ class _PropShatterPainter extends CustomPainter {
       canvas.rotate(s.rotation);
       switch (s.style) {
         case PropShatterStyle.glass:
-          _poly(canvas, s, a * 0.65, stroke: Colors.white.withValues(alpha: a * 0.45));
+          _poly(canvas, s, a * 0.7,
+              stroke: Colors.white.withValues(alpha: a * 0.6), bevel: true);
         case PropShatterStyle.ceramic:
-          _poly(canvas, s, a, stroke: Colors.white.withValues(alpha: a * 0.2));
+          _poly(canvas, s, a,
+              stroke: Colors.white.withValues(alpha: a * 0.28), bevel: true);
         case PropShatterStyle.wood:
-          final paint = Paint()..color = s.color.withValues(alpha: a);
-          canvas.drawRRect(
-            RRect.fromRectAndRadius(
-              Rect.fromCenter(center: Offset.zero, width: s.size, height: s.size * s.aspect),
-              const Radius.circular(1.5),
-            ),
-            paint,
+          final rect = Rect.fromCenter(
+              center: Offset.zero, width: s.size, height: s.size * s.aspect);
+          final paint = Paint()
+            ..shader = LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Color.lerp(s.color, Colors.white, 0.35)!.withValues(alpha: a),
+                s.color.withValues(alpha: a),
+                Color.lerp(s.color, Colors.black, 0.4)!.withValues(alpha: a),
+              ],
+              stops: const [0.0, 0.5, 1.0],
+            ).createShader(rect);
+          final rr = RRect.fromRectAndRadius(rect, const Radius.circular(1.5));
+          canvas.drawRRect(rr, paint);
+          // Lit top-left edge highlight (bevel).
+          canvas.drawLine(
+            rect.bottomLeft,
+            rect.topLeft,
+            Paint()
+              ..color = Colors.white.withValues(alpha: a * 0.3)
+              ..strokeWidth = 0.8,
+          );
+          canvas.drawLine(
+            rect.topLeft,
+            rect.topRight,
+            Paint()
+              ..color = Colors.white.withValues(alpha: a * 0.3)
+              ..strokeWidth = 0.8,
           );
         case PropShatterStyle.metal:
           final paint = Paint()
@@ -307,27 +331,68 @@ class _PropShatterPainter extends CustomPainter {
     }
   }
 
-  void _poly(Canvas canvas, PropShatterShard s, double alpha, {Color? stroke}) {
+  void _poly(
+    Canvas canvas,
+    PropShatterShard s,
+    double alpha, {
+    Color? stroke,
+    bool bevel = false,
+  }) {
     final path = Path();
+    Offset? first;
     for (var i = 0; i < s.vertices.length; i++) {
       final v = s.vertices[i];
       final pt = Offset(v.dx * s.size, v.dy * s.size);
       if (i == 0) {
+        first = pt;
         path.moveTo(pt.dx, pt.dy);
       } else {
         path.lineTo(pt.dx, pt.dy);
       }
     }
     path.close();
-    canvas.drawPath(path, Paint()..color = s.color.withValues(alpha: alpha));
+
+    final fill = Paint();
+    if (bevel) {
+      // Material-colored bevel: a lit facet fading to a shaded edge gives the
+      // shard volume instead of a flat silhouette.
+      final r = Rect.fromCircle(center: Offset.zero, radius: s.size);
+      fill.shader = LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [
+          Color.lerp(s.color, Colors.white, 0.45)!.withValues(alpha: alpha),
+          s.color.withValues(alpha: alpha),
+          Color.lerp(s.color, Colors.black, 0.35)!.withValues(alpha: alpha),
+        ],
+        stops: const [0.0, 0.55, 1.0],
+      ).createShader(r);
+    } else {
+      fill.color = s.color.withValues(alpha: alpha);
+    }
+    canvas.drawPath(path, fill);
+
     if (stroke != null) {
       canvas.drawPath(
         path,
         Paint()
           ..color = stroke
           ..style = PaintingStyle.stroke
-          ..strokeWidth = 0.9,
+          ..strokeWidth = 0.9
+          ..strokeJoin = StrokeJoin.round,
       );
+      // Bright specular glint along the first lit edge.
+      if (bevel && first != null && s.vertices.length > 1) {
+        final v1 = s.vertices[1];
+        canvas.drawLine(
+          first,
+          Offset(v1.dx * s.size, v1.dy * s.size),
+          Paint()
+            ..color = Colors.white.withValues(alpha: alpha * 0.7)
+            ..strokeWidth = 0.8
+            ..strokeCap = StrokeCap.round,
+        );
+      }
     }
   }
 

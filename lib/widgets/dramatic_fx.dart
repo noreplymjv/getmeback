@@ -17,7 +17,9 @@ class DramaticFxOverlay extends StatelessWidget {
     this.smokes = const [],
     this.cracks = const [],
     this.flash = 0,
+    this.flashPoint,
     this.vignette = 0,
+    this.vignettePulse = 0,
     this.chromaticAberration = 0,
     this.shake = Offset.zero,
     this.child,
@@ -30,7 +32,15 @@ class DramaticFxOverlay extends StatelessWidget {
   final List<FxSmoke> smokes;
   final List<FxCrack> cracks;
   final double flash;
+
+  /// Focal point for the radial impact flash (screen coords). When null the
+  /// flash is rendered as a soft full-screen wash only.
+  final Offset? flashPoint;
   final double vignette;
+
+  /// Extra vignette intensity that spikes on heavy hits and decays quickly,
+  /// giving the cinematic "pulse" on big impacts.
+  final double vignettePulse;
   final double chromaticAberration;
   final Offset shake;
   final Widget? child;
@@ -89,24 +99,44 @@ class DramaticFxOverlay extends StatelessWidget {
           ),
           if (flash > 0)
             IgnorePointer(
-              child: ColoredBox(
-                color: Color.lerp(
-                  const Color(0xFFFFD166),
-                  Colors.white,
-                  0.45,
-                )!.withValues(alpha: flash * 0.55),
+              child: CustomPaint(
+                painter: _ImpactFlashPainter(
+                  intensity: flash,
+                  focus: flashPoint,
+                ),
               ),
             ),
-          if (vignette > 0)
+          if (vignette > 0 || vignettePulse > 0)
             IgnorePointer(
               child: DecoratedBox(
                 decoration: BoxDecoration(
                   gradient: RadialGradient(
                     colors: [
                       Colors.transparent,
-                      Colors.black.withValues(alpha: vignette * 0.45),
+                      Colors.transparent,
+                      Colors.black.withValues(
+                        alpha: (vignette * 0.5 + vignettePulse * 0.4)
+                            .clamp(0.0, 0.85),
+                      ),
                     ],
-                    radius: 0.85,
+                    stops: [0.0, (0.62 - vignettePulse * 0.18).clamp(0.3, 0.7), 1.0],
+                    radius: 1.05 - vignettePulse * 0.2,
+                  ),
+                ),
+              ),
+            ),
+          if (vignettePulse > 0.02)
+            IgnorePointer(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: RadialGradient(
+                    colors: [
+                      Colors.transparent,
+                      const Color(0xFFFF7043)
+                          .withValues(alpha: vignettePulse * 0.22),
+                    ],
+                    stops: const [0.78, 1.0],
+                    radius: 1.1,
                   ),
                 ),
               ),
@@ -269,7 +299,9 @@ class FxCrack {
     required this.length,
     required this.life,
     required this.color,
-  });
+    int? seed,
+    this.width = 2.5,
+  }) : seed = seed ?? ((x * 31 + y * 17 + angle * 97).toInt() & 0x7fffffff);
 
   double x;
   double y;
@@ -277,6 +309,10 @@ class FxCrack {
   double length;
   double life;
   Color color;
+
+  /// Deterministic seed so the jagged fracture path is stable per crack.
+  final int seed;
+  final double width;
 
   void tick(double dt) {
     life -= dt * 1.2;
@@ -295,7 +331,9 @@ class DramaticFxController extends ChangeNotifier {
   final List<FxSmoke> smokes = [];
   final List<FxCrack> cracks = [];
   double flash = 0;
+  Offset? flashPoint;
   double vignette = 0;
+  double vignettePulse = 0;
   double chromaticAberration = 0;
   bool isBulletTime = false;
   double bulletTimeFactor = 1.0;
@@ -388,7 +426,11 @@ class DramaticFxController extends ChangeNotifier {
     if (haptic) VentSfx.medium();
     VentSfx.instance.play(intensity > 1.3 ? Sfx.smash : Sfx.hit);
     flash = (0.65 * intensity).clamp(0.0, 1.0);
+    flashPoint = at;
     vignette = (0.35 * intensity).clamp(0.0, 0.6);
+    if (intensity >= 1.2) {
+      vignettePulse = max(vignettePulse, (0.4 * intensity).clamp(0.0, 0.8));
+    }
     _shakeAmp = 18 * intensity;
     _shakeDuration = 0.28;
     _shakeT = _shakeDuration;
@@ -414,7 +456,9 @@ class DramaticFxController extends ChangeNotifier {
     }
     VentSfx.instance.play(Sfx.smash);
     flash = 1.0;
+    flashPoint = at;
     vignette = 0.55;
+    vignettePulse = max(vignettePulse, 0.75);
     _shakeAmp = 28;
     _shakeDuration = 0.4;
     _shakeT = _shakeDuration;
@@ -834,7 +878,13 @@ class DramaticFxController extends ChangeNotifier {
       changed = true;
     }
     if (flash > 0) {
-      flash = (flash - dt * 4.0).clamp(0.0, 1.0);
+      // ~120 ms hot flash falloff.
+      flash = (flash - dt * 7.0).clamp(0.0, 1.0);
+      if (flash == 0) flashPoint = null;
+      changed = true;
+    }
+    if (vignettePulse > 0) {
+      vignettePulse = (vignettePulse - dt * 3.4).clamp(0.0, 1.0);
       changed = true;
     }
     if (vignette > 0) {
@@ -921,18 +971,22 @@ class _FxPainter extends CustomPainter {
     }
 
     for (final c in cracks) {
+      final a = c.life.clamp(0.0, 1.0);
       final paint = Paint()
-        ..color = c.color.withValues(alpha: c.life.clamp(0.0, 1.0))
-        ..strokeWidth = 2.5
+        ..color = c.color.withValues(alpha: a)
+        ..strokeWidth = c.width
+        ..strokeCap = StrokeCap.round
+        ..strokeJoin = StrokeJoin.round
         ..style = PaintingStyle.stroke;
-      canvas.drawLine(
-        Offset(c.x, c.y),
-        Offset(
-          c.x + cos(c.angle) * c.length,
-          c.y + sin(c.angle) * c.length,
-        ),
-        paint,
-      );
+      // Faint bright core running down the fracture for depth.
+      final corePaint = Paint()
+        ..color = Colors.white.withValues(alpha: a * 0.35)
+        ..strokeWidth = (c.width * 0.4).clamp(0.6, 1.4)
+        ..strokeCap = StrokeCap.round
+        ..style = PaintingStyle.stroke;
+      final path = _crackPath(c);
+      canvas.drawPath(path, paint);
+      canvas.drawPath(path, corePaint);
     }
 
     for (final r in rings) {
@@ -944,20 +998,50 @@ class _FxPainter extends CustomPainter {
     }
 
     for (final sw in shockwaves) {
+      final center = Offset(sw.x, sw.y);
       final alpha = (sw.life * 0.75).clamp(0.0, 1.0);
       final ringWidth = (14.0 * (1.0 - (1.0 - sw.life) * 0.5)).clamp(3.0, 18.0);
+
+      // Soft pressure disc trailing just behind the leading edge.
+      if (sw.radius > 4) {
+        final discPaint = Paint()
+          ..shader = RadialGradient(
+            colors: [
+              Colors.transparent,
+              sw.color.withValues(alpha: alpha * 0.10),
+              Colors.transparent,
+            ],
+            stops: const [0.55, 0.9, 1.0],
+          ).createShader(Rect.fromCircle(center: center, radius: sw.radius));
+        canvas.drawCircle(center, sw.radius, discPaint);
+      }
+
       final outerPaint = Paint()
         ..color = sw.color.withValues(alpha: alpha * 0.45)
         ..style = PaintingStyle.stroke
         ..strokeWidth = ringWidth
         ..maskFilter = MaskFilter.blur(BlurStyle.normal, ringWidth * 0.4);
-      canvas.drawCircle(Offset(sw.x, sw.y), sw.radius, outerPaint);
+      canvas.drawCircle(center, sw.radius, outerPaint);
+
+      // Trailing echo ring expanding + fading behind the main front.
+      final trail = sw.radius - ringWidth * 1.6;
+      if (trail > 0) {
+        canvas.drawCircle(
+          center,
+          trail,
+          Paint()
+            ..color = sw.color.withValues(alpha: alpha * 0.2)
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = ringWidth * 0.5
+            ..maskFilter = MaskFilter.blur(BlurStyle.normal, ringWidth * 0.5),
+        );
+      }
 
       final innerPaint = Paint()
         ..color = Colors.white.withValues(alpha: alpha * 0.85)
         ..style = PaintingStyle.stroke
         ..strokeWidth = 2.2;
-      canvas.drawCircle(Offset(sw.x, sw.y), sw.radius, innerPaint);
+      canvas.drawCircle(center, sw.radius, innerPaint);
     }
 
     for (final p in particles) {
@@ -1018,6 +1102,33 @@ class _FxPainter extends CustomPainter {
       }
       canvas.restore();
     }
+  }
+
+  /// Builds a jagged, branching fracture path so cracks read as splintering
+  /// glass/ceramic rather than a single straight scratch.
+  Path _crackPath(FxCrack c) {
+    final rng = Random(c.seed);
+    final origin = Offset(c.x, c.y);
+    final path = Path()..moveTo(origin.dx, origin.dy);
+    final steps = 3 + rng.nextInt(3);
+    final stepLen = c.length / steps;
+    var pt = origin;
+    var ang = c.angle;
+    for (var i = 0; i < steps; i++) {
+      ang += (rng.nextDouble() - 0.5) * 0.7;
+      final next = pt + Offset(cos(ang), sin(ang)) * stepLen;
+      path.lineTo(next.dx, next.dy);
+      // Occasional splinter branch off a mid segment.
+      if (i > 0 && rng.nextDouble() < 0.5) {
+        final bAng = ang + (rng.nextBool() ? 1 : -1) * (0.5 + rng.nextDouble() * 0.6);
+        final bEnd = next + Offset(cos(bAng), sin(bAng)) * stepLen * (0.4 + rng.nextDouble() * 0.4);
+        path.moveTo(next.dx, next.dy);
+        path.lineTo(bEnd.dx, bEnd.dy);
+        path.moveTo(next.dx, next.dy);
+      }
+      pt = next;
+    }
+    return path;
   }
 
   void _drawStar(Canvas canvas, Paint paint, double size) {
@@ -1105,12 +1216,62 @@ class VentFxLayer extends StatelessWidget {
       smokes: fx.smokes,
       cracks: fx.cracks,
       flash: reduceMotion ? 0 : fx.flash,
+      flashPoint: fx.flashPoint,
       vignette: fx.vignette,
+      vignettePulse: reduceMotion ? 0 : fx.vignettePulse,
       chromaticAberration: reduceMotion ? 0 : fx.chromaticAberration,
       shake: reduceMotion ? Offset.zero : fx.shake,
       child: child,
     );
   }
+}
+
+/// Hit-lighting flash: a hot radial bloom at the impact point over a soft
+/// full-screen wash, using an additive (screen-like) blend for a punchy
+/// 100–150 ms lighting pop on impact.
+class _ImpactFlashPainter extends CustomPainter {
+  _ImpactFlashPainter({required this.intensity, this.focus});
+
+  final double intensity;
+  final Offset? focus;
+
+  static const _hot = Color(0xFFFFF3D6);
+  static const _warm = Color(0xFFFFD166);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (intensity <= 0.01) return;
+    final rect = Offset.zero & size;
+
+    // Soft full-screen wash (subtle — the radial does the heavy lifting).
+    canvas.drawRect(
+      rect,
+      Paint()
+        ..blendMode = BlendMode.plus
+        ..color = _warm.withValues(alpha: (intensity * 0.22).clamp(0.0, 0.5)),
+    );
+
+    final center = focus ?? rect.center;
+    final radius = size.shortestSide * (0.35 + intensity * 0.4);
+    final glow = Rect.fromCircle(center: center, radius: radius);
+    canvas.drawRect(
+      glow,
+      Paint()
+        ..blendMode = BlendMode.plus
+        ..shader = RadialGradient(
+          colors: [
+            Colors.white.withValues(alpha: (intensity * 0.9).clamp(0.0, 1.0)),
+            _hot.withValues(alpha: (intensity * 0.5).clamp(0.0, 1.0)),
+            _warm.withValues(alpha: 0.0),
+          ],
+          stops: const [0.0, 0.35, 1.0],
+        ).createShader(glow),
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _ImpactFlashPainter old) =>
+      old.intensity != intensity || old.focus != focus;
 }
 
 class _ChromaticAberrationPainter extends CustomPainter {

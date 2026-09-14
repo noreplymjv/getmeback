@@ -11,8 +11,10 @@
 #   https://noreplymjv.github.io/getmeback/       (stable / current root)
 #   https://noreplymjv.github.io/getmeback/v2/    (versioned)
 #   https://noreplymjv.github.io/getmeback/v3/    (versioned)
-#   https://noreplymjv.github.io/getmeback/v3a/   (recommended)
+#   https://noreplymjv.github.io/getmeback/v3a/   (versioned)
+#   https://noreplymjv.github.io/getmeback/v5/    (recommended)
 #   https://noreplymjv.github.io/getmeback/versions.html
+#   NOTE: /v4/ slot is reserved/unused (404) — do not deploy into it.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -103,7 +105,11 @@ write_versions_index() {
   <h1>GetMeBack — live versions</h1>
   <p>All builds stay online simultaneously. Pick a version:</p>
   <div class="card">
-    <div><strong>v3a (recommended)</strong> — restored room prop sprites + improved Kintsugi mend</div>
+    <div><strong>v5 (recommended)</strong> — world-class smash FX: impact hit-flash, pulsing vignette, expanding shockwave rings, richer branching cracks &amp; beveled shards</div>
+    <a href="./v5/">https://noreplymjv.github.io/getmeback/v5/</a>
+  </div>
+  <div class="card">
+    <div><strong>v3a</strong> — restored room prop sprites + improved Kintsugi mend</div>
     <a href="./v3a/">https://noreplymjv.github.io/getmeback/v3a/</a>
   </div>
   <div class="card">
@@ -118,6 +124,7 @@ write_versions_index() {
     <div><strong>Stable (v1 root)</strong></div>
     <a href="./">https://noreplymjv.github.io/getmeback/</a>
   </div>
+  <p style="color:#6b7280;font-size:.85rem">Note: the <code>/v4/</code> slot is reserved and currently unused (404).</p>
 </body>
 </html>
 HTML

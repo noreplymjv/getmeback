@@ -72,6 +72,16 @@ class _DestructionScarsPainter extends CustomPainter {
         _drawSpill(canvas, scar);
         continue;
       }
+      // Per-scar rotation + scale variety so repeated smashes never leave two
+      // identical decals — each fracture pattern reads uniquely.
+      final vr = Random(scar.seed ^ 0x9E3779B9);
+      final rot = (vr.nextDouble() - 0.5) * pi;
+      final scale = 0.85 + vr.nextDouble() * 0.4;
+      canvas.save();
+      canvas.translate(scar.center.dx, scar.center.dy);
+      canvas.rotate(rot);
+      canvas.scale(scale);
+      canvas.translate(-scar.center.dx, -scar.center.dy);
       switch (scar.material) {
         case PropMaterial.glass:
           _drawGlass(canvas, scar);
@@ -86,6 +96,7 @@ class _DestructionScarsPainter extends CustomPainter {
         case PropMaterial.plastic:
           _drawCeramic(canvas, scar);
       }
+      canvas.restore();
     }
   }
 
